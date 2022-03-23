@@ -1,0 +1,114 @@
+.navbar-main .nav-link {
+  font-size: 1.3rem;
+}
+
+.navbar-main .navbar-nav {
+  width: 100%;
+}
+
+.header-with-button {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  padding-right: 16px;
+}
+
+h1, .h1, .h1, h2, .h2, .h2, h3, .h3, .h3 {
+  font-family: "Roboto", Helvetica, Arial, sans-serif;
+}
+
+.country-name {
+  width: 90px;
+  display: inline-block;
+}
+
+.user-agent {
+  max-width: 250px;
+  display: inline-block;
+}
+
+.reason-text {
+  max-width: 450px;
+  display: inline-block;
+}
+
+table, table td, table tbody {
+  border: 0 !important;
+}
+
+table {
+  width: 100% !important;
+}
+
+table.dataTable tbody tr {
+  background-color: transparent !important;
+}
+
+.table thead th {
+  border-bottom: none !important;
+}
+
+div.dataTables_processing {
+  height: 100% !important;
+  background-color: #ffffff !important;
+  margin-top: -40px !important;
+}
+
+.input-group-text {
+  position: static !important;
+  display: flex !important;
+  align-items: center !important;
+  padding: 0.375rem 0.75rem !important;
+  font-size: 1rem !important;
+  font-weight: 400 !important;
+  line-height: 1.5 !important;
+  color: #212529 !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+  background-color: #e9ecef !important;
+  border: 1px solid #ced4da !important;
+  border-radius: 0.25rem !important;
+}
+
+.btn-check:checked + .btn-outline-secondary, .btn-check:active + .btn-outline-secondary, .btn-outline-secondary:active, .btn-outline-secondary.active, .btn-outline-secondary.dropdown-toggle.show {
+  color: #fff !important;
+}
+
+.btn-outline-secondary:hover:not(.active) {
+  background-color: #7b809a !important;
+}
+
+.slick {
+  padding-bottom: 30px;
+}
+
+.slick-arrow {
+  background-color: rgba(255, 255, 255, 0.7);
+  height: 26px;
+  width: 26px;
+  border-radius: 100%;
+  text-align: center;
+  line-height: 26px;
+  color: rgba(0, 0, 0, .3);
+  cursor: pointer;
+}
+.slick-arrow:hover {
+  background-color: rgba(255, 255, 255, 1);
+  color: rgba(0, 0, 0, .5);
+}
+
+.slick-arrow.slick-prev {
+  position: absolute;
+  z-index: 100;
+  top: 50%;
+  margin-top: -50px;
+  left: 15px;
+}
+
+.slick-arrow.slick-next {
+  position: absolute;
+  z-index: 100;
+  top: 50%;
+  margin-top: -50px;
+  right: 15px;
+}

@@ -1,0 +1,44 @@
+      <div id="content">
+        <div class="card">
+          <div class="mx-3">
+            <div class="row">
+              <div class="col-sm-6 col-12">
+                <div class="input-group input-group-outline my-3">
+                  <select class="form-control" id="type_select" v-model="selectedStream">
+                    <option v-for="stream in streams">{{ stream.stream }}</option>
+                  </select>
+                </div>
+              </div>
+              <div class="col-sm-6 col-12">
+                <div class="input-group input-group-outline my-3">
+                  <select class="form-control" id="date_select" v-model="selectedDate">
+                    <option v-for="date in currentDates" :value="date.time">{{ date.name }}</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row mt-4">
+          <div class="col-12">
+            <div class="card my-4">
+              <div class="card-header p-0 position-relative mt-n4 mx-3 z-index-2">
+                <div class="bg-gradient-primary shadow-primary border-radius-lg pt-4 pb-3 header-with-button">
+                  <h6 class="text-white text-capitalize ps-3"><span id="type_header">MIX</span> <span id="date_header">Текущий</span></h6>
+                  <a href="javascript:;" @click="clearCurrent()" class="text-white font-weight-bold text-s" title="Очистить таблицу">
+                    <i class="fas fa-trash-alt"></i>
+                  </a>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="table-responsive">
+                  <table class="table align-items-center mb-0" id="current-table"></table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <script src="/assets/js/pages/current.js"></script>
