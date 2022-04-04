@@ -5,13 +5,13 @@ require_once("./php/mysqli.php");
 // проверка IP на блеклист
 $ip = getIP();
 if (checkBlacklist($mysqli, $ip)) {
-  writeRecord($mysqli, "blacklist", '', '', $ip, '', getCountryCode($ip), time());
+  writeRecord($mysqli, "blacklist", '', $_SERVER['HTTP_USER_AGENT'], '', $ip, '', getCountryCode($ip), time());
   die("0");
 }
 
 // проверка юзер-агента
 if ($_SERVER['HTTP_USER_AGENT'] != "1") {
-  writeRecord($mysqli, "decline", '', '', $ip, '', getCountryCode($ip), time());
+  writeRecord($mysqli, "decline", '', $_SERVER['HTTP_USER_AGENT'], '', $ip, '', getCountryCode($ip), time());
   header("HTTP/1.0 404 Not Found");
   die();
 }
@@ -36,7 +36,7 @@ foreach ($streams as $s) {
         }
       }
       if (!$search) {
-        writeRecord($mysqli, "decline", '', '', $ip, '', getCountryCode($ip), time());
+        writeRecord($mysqli, "decline", '', $_SERVER['HTTP_USER_AGENT'], '', $ip, '', getCountryCode($ip), time());
         die("0");
       }
     }
@@ -46,19 +46,19 @@ foreach ($streams as $s) {
 }
 
 if ($stream == "") {
-  writeRecord($mysqli, "decline", '', '', $ip, '', getCountryCode($ip), time());
+  writeRecord($mysqli, "decline", '', $_SERVER['HTTP_USER_AGENT'], '', $ip, '', getCountryCode($ip), time());
   die("0");
 }
 
 // проверка айпи на повторы
 if (!checkIP($mysqli, $ip)) {
-  writeRecord($mysqli, "decline", '', '', $ip, '', getCountryCode($ip), time());
+  writeRecord($mysqli, "decline", '', $_SERVER['HTTP_USER_AGENT'], '', $ip, '', getCountryCode($ip), time());
   die("0");
 }
 
 $sub = $_GET["sub"];
 
-writeRecord($mysqli, $stream, $substream, $sub, $ip, getDistributor(strtoupper($stream)), getCountryCode($ip), time());
+writeRecord($mysqli, $stream, $substream, $_SERVER['HTTP_USER_AGENT'], $sub, $ip, getDistributor(strtoupper($stream)), getCountryCode($ip), time());
 
 echo "1";
 
@@ -180,8 +180,8 @@ function checkBlacklist($mysqli, $ip) {
   return ($row['cnt'] != 0);
 }
 
-function writeRecord($mysqli, $stream, $substream, $sub,  $ip,$distributor, $country, $timestamp) {
-  $q = "INSERT INTO `records` (`stream`, `substream`, `sub`, `ip`, `distributor`, `country`, `timestamp`) VALUES ('$stream', '$substream', '$sub', '$ip', '$distributor', '$country', $timestamp)";
+function writeRecord($mysqli, $stream, $substream, $ua, $sub,  $ip,$distributor, $country, $timestamp) {
+  $q = "INSERT INTO `records` (`stream`, `substream`, `ua`, `sub`, `ip`, `distributor`, `country`, `timestamp`) VALUES ('$stream', '$substream', '$ua', '$sub', '$ip', '$distributor', '$country', $timestamp)";
   mysqli_query($mysqli, $q);
 }
 

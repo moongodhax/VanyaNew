@@ -15,22 +15,22 @@ function getStreamStats($current_ts, $stream, $substream = "") {
 
   $out = ["current" => 0, "hour" => 0, "day" => 0, "7days" => 0];
 
-  $result = mysqli_query($mysqli, "SELECT COUNT(*) AS cnt FROM `records` WHERE `timestamp` > $current_ts AND `stream` = '$stream' $substream");
+  $result = mysqli_query($mysqli, "SELECT COUNT(*) AS cnt FROM `records` WHERE `timestamp` > $current_ts AND `stream` = '$stream' AND `stream` != 'decline' AND `stream` != 'blacklist' $substream");
   $row = mysqli_fetch_assoc($result);
   $out["current"] = $row['cnt'];
 
   $t = time() - 3600;
-  $result = mysqli_query($mysqli, "SELECT COUNT(*) AS cnt FROM `records` WHERE `timestamp` > {$t} AND `stream` = '$stream' $substream");
+  $result = mysqli_query($mysqli, "SELECT COUNT(*) AS cnt FROM `records` WHERE `timestamp` > {$t} AND `stream` = '$stream' AND `stream` != 'decline' AND `stream` != 'blacklist' $substream");
   $row = mysqli_fetch_assoc($result);
   $out["hour"] = $row['cnt'];
 
   $t = time() - 3600 * 24;
-  $result = mysqli_query($mysqli, "SELECT COUNT(*) AS cnt FROM `records` WHERE `timestamp` > {$t} AND `stream` = '$stream' $substream");
+  $result = mysqli_query($mysqli, "SELECT COUNT(*) AS cnt FROM `records` WHERE `timestamp` > {$t} AND `stream` = '$stream' AND `stream` != 'decline' AND `stream` != 'blacklist' $substream");
   $row = mysqli_fetch_assoc($result);
   $out["day"] = $row['cnt'];
 
   $t = time() - 3600 * 24 * 7;
-  $result = mysqli_query($mysqli, "SELECT COUNT(*) AS cnt FROM `records` WHERE `timestamp` > {$t} AND `stream` = '$stream' $substream");
+  $result = mysqli_query($mysqli, "SELECT COUNT(*) AS cnt FROM `records` WHERE `timestamp` > {$t} AND `stream` = '$stream' AND `stream` != 'decline' AND `stream` != 'blacklist' $substream");
   $row = mysqli_fetch_assoc($result);
   $out["7days"] = $row['cnt'];
 
@@ -66,7 +66,7 @@ function getMap($stream, $substream = "") {
 
   $substream = ($substream == "") ? "" : " AND `substream` = '$substream'";
 
-  $where = ($stream == "all") ? "" : "WHERE `stream` = '$stream' $substream";
+  $where = ($stream == "all") ? "WHERE `stream` != 'decline' AND `stream` != 'blacklist'" : "WHERE `stream` = '$stream' AND `stream` != 'decline' AND `stream` != 'blacklist' $substream";
   $and = ($stream == "all") ? "" : "AND `stream` = '$stream' $substream";
 
   $countries = [
@@ -96,7 +96,7 @@ function getMap($stream, $substream = "") {
   
   $unique = [];
   
-  $result = mysqli_query($mysqli, "SELECT DISTINCT `country` FROM `records` $where");
+  $result = mysqli_query($mysqli, "SELECT DISTINCT `country` FROM `records` $where ");
   while($row = mysqli_fetch_assoc($result)) {
     $unique[] = $row['country'];
   }
@@ -107,7 +107,7 @@ function getMap($stream, $substream = "") {
       $q .= "COUNT(CASE WHEN `country` = '$v' $and THEN 1 END) AS '$v',\n";
     }
     $q = substr($q, 0, -2);
-    $q .= "\nFROM `records`";
+    $q .= "\nFROM `records` WHERE `stream` != 'decline' AND `stream` != 'blacklist'";
 
     $result = mysqli_query($mysqli, $q);
     $row = mysqli_fetch_assoc($result);
@@ -158,7 +158,7 @@ function getDayChartMonth() {
   }
 
   $q = substr($q, 0, -2);
-  $q .= "\nFROM `records`";
+  $q .= "\nFROM `records` WHERE `stream` != 'decline' AND `stream` != 'blacklist'";
 
   $result = mysqli_query($mysqli, $q);
   $row = mysqli_fetch_assoc($result);

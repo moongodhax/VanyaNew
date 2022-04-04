@@ -28,7 +28,7 @@ var app = new Vue({
           title: "IP",
           data: "ip",
           render: function ( data, type, row, meta ) {
-            return `<img src="/assets/img/flags/${row.country}.svg" class="avatar-xs me-2" title="${row.country}"> ${data}`;
+            return `<img src="/assets/img/flags/${row.country.toLowerCase()}.svg" class="avatar-xs me-2" title="${row.country}"> ${data}`;
           }
         },
         {
@@ -109,6 +109,8 @@ var app = new Vue({
         if (self.currentDates.length > 0) {
           self.$nextTick(() => {
             self.selectedDate = self.currentDates[0].time;
+            $("#current-table").DataTable().ajax.reload();
+            $("#date_header").html($(this).find("option:selected").text());
           })
         }
       })
@@ -134,10 +136,6 @@ var app = new Vue({
   watch: {
     selectedStream: function (val) {
       this.updateDates();
-    },
-    selectedDate: function (val) {
-      $("#current-table").DataTable().ajax.reload();
-      $("#date_header").html($(this).find("option:selected").text());
     },
   }
 });

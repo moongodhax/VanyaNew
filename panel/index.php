@@ -85,5 +85,7 @@ switch ($path){
   break;
 }
 
+session_write_close();
+
 require_once("api.php");
 ?>

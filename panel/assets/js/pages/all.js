@@ -47,7 +47,7 @@ $(document).ready(function () {
           title: "IP",
           data: "ip",
           render: function ( data, type, row, meta ) {
-            return `<img src="/assets/img/flags/${row.country}.svg" class="avatar-xs me-2" title="${row.country}"> ${data}`;
+            return `<img src="/assets/img/flags/${row.country.toLowerCase()}.svg" class="avatar-xs me-2" title="${row.country}"> ${data}`;
           }
         },
         {
