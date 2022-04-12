@@ -4,8 +4,13 @@
             <div class="row">
               <div class="col-sm-6 col-12">
                 <div class="input-group input-group-outline my-3">
-                  <select class="form-control" id="type_select" v-model="selectedStream">
-                    <option v-for="stream in streams">{{ stream.stream }}</option>
+                  <select class="form-control" id="type_select" @change="streamSelected()">
+                    <template v-for="stream in streams">
+                      <optgroup :label="stream.stream">
+                        <option :data-stream="stream.stream" :data-substream="''">{{ stream.stream }}</option>
+                        <option :data-stream="stream.stream" :data-substream="sub.name" v-for="sub in stream.substreams">{{ stream.stream }} &mdash; {{ sub.name }}</option>
+                      </optgroup>
+                    </template>
                   </select>
                 </div>
               </div>

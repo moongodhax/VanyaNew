@@ -1,6 +1,6 @@
 <?php
 session_start();
-require_once("php/data.php");
+require_once(__DIR__ . "/php/data.php");
 
 $url_array = parse_url($_SERVER['REQUEST_URI']);
 $path = $url_array["path"];

@@ -27,6 +27,10 @@
 
   <script src="https://cdn.jsdelivr.net/npm/axios@0.12.0/dist/axios.min.js"></script>
   <script type="text/javascript" src="//cdn.jsdelivr.net/npm/slick-carousel@1.8.1/slick/slick.min.js"></script>
+  
+  <script src="/assets/js/plugins/selectize/js/standalone/selectize.js"></script>
+  <link rel="stylesheet" type="text/css" href="/assets/js/plugins/selectize/css/selectize.css"/>
+  <link rel="stylesheet" type="text/css" href="/assets/js/plugins/selectize/css/selectize.bootstrap5.css"/>
 
   <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
 </head>

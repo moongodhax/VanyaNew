@@ -9,6 +9,15 @@ if (checkBlacklist($mysqli, $ip)) {
   die("0");
 }
 
+// проверка за забаненность страны
+$country = getCountryCode($ip);
+$banned = getBannedCountries($mysqli);
+
+if (array_search($country, $banned) !== false) {
+  writeRecord($mysqli, "banned", '', $_SERVER['HTTP_USER_AGENT'], '', $ip, '', getCountryCode($ip), time());
+  die("0");
+}
+
 // проверка юзер-агента
 if ($_SERVER['HTTP_USER_AGENT'] != "1") {
   writeRecord($mysqli, "decline", '', $_SERVER['HTTP_USER_AGENT'], '', $ip, '', getCountryCode($ip), time());
@@ -21,27 +30,32 @@ if (!isset($_GET["stream"])) die("0");
 
 $stream = "";
 $substream = "";
-$streams = getStreams($mysqli);
-foreach ($streams as $s) {
-  if ($s["stream"] == $_GET["stream"]) {
-    $stream = $_GET["stream"];
+if ($_GET["stream"] == "mix" && $_GET["substream"] == "mixtwo") {
+  $stream = "mixone";
+  $substream = "mixtwo";
+} else {
+  $streams = getStreams($mysqli);
+  foreach ($streams as $s) {
+    if ($s["stream"] == $_GET["stream"]) {
+      $stream = $_GET["stream"];
 
-    if (isset($_GET["substream"])) {
-      $search = false;
-      foreach ($s["substreams"] as $ss) {
-        if ($ss['name'] == $_GET["substream"]) {
-          $substream = $_GET["substream"];
-          $search = true;
-          break;
+      if (isset($_GET["substream"])) {
+        $search = false;
+        foreach ($s["substreams"] as $ss) {
+          if ($ss['name'] == $_GET["substream"]) {
+            $substream = $_GET["substream"];
+            $search = true;
+            break;
+          }
+        }
+        if (!$search) {
+          writeRecord($mysqli, "decline", '', $_SERVER['HTTP_USER_AGENT'], '', $ip, '', getCountryCode($ip), time());
+          die("0");
         }
       }
-      if (!$search) {
-        writeRecord($mysqli, "decline", '', $_SERVER['HTTP_USER_AGENT'], '', $ip, '', getCountryCode($ip), time());
-        die("0");
-      }
-    }
 
-    break;
+      break;
+    }
   }
 }
 
@@ -62,17 +76,15 @@ writeRecord($mysqli, $stream, $substream, $_SERVER['HTTP_USER_AGENT'], $sub, $ip
 
 echo "1";
 
-if ($stream == "mix") $trackid = "lltvuslp";
-else if ($stream == "us") $trackid = "badlcf58";
-else if ($stream == "eu") $trackid = "wnckxrxo";
-
-if ($stream != "ru" && $stream != "shortcuts" && $stream != "doubles") {
-  file_get_contents("http://adsymbol.com/track/$trackid?sub=$sub&ip=$ip");
-}
-
 /*
  * функции
  */
+
+function getBannedCountries($mysqli) {
+  $result = mysqli_query($mysqli, "SELECT `value` AS val FROM `settings` WHERE `name` = 'banned_countries'");
+  $row = mysqli_fetch_assoc($result);
+  return json_decode($row['val']);
+}
 
 function getStreams($mysqli) {
   $streams = [];
@@ -159,6 +171,8 @@ function getIP() {
   
   else $ip = $_SERVER['REMOTE_ADDR'];
   
+  if ($ip == 'unknown') $ip = $_SERVER['REMOTE_ADDR'];
+
   return $ip; 
 }
 

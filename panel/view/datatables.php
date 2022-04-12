@@ -1,16 +1,35 @@
 <?php
-session_start();
-
-if (!isset($_SESSION["logined"]) || $_SESSION["logined"] != true) {
+if (!isset($_GET["hash"])) {
   header("HTTP/1.0 404 Not Found");
   die();
 }
 
-require_once("php/mysqli.php");
+require_once(__DIR__ . "/../php/mysqli.php");
+
+$stream = null;
+$substream = null;
+
+$hash = mysqli_real_escape_string($mysqli, $_GET['hash']);
+
+$result = mysqli_query($mysqli, "SELECT COUNT(*) AS cnt FROM `substreams` WHERE `hash` = '$hash'");
+$row = mysqli_fetch_assoc($result);
+
+if ($row['cnt'] > 0) {
+  $result = mysqli_query($mysqli, "SELECT * FROM `substreams` WHERE `hash` = '$hash'");
+  $row = mysqli_fetch_assoc($result);
+  $substream = $row["name"];
+
+  $result = mysqli_query($mysqli, "SELECT * FROM `streams` WHERE `id` = " . $row["streamid"]);
+  $row = mysqli_fetch_assoc($result);
+  $stream = $row["name"];
+} else {
+  header("HTTP/1.0 404 Not Found");
+  die();
+}
+
 
 /* DB table to use */
 $sTable = "records";
-
 
 $draw = $_POST["draw"];
 $pColumns = $_POST["columns"];
@@ -82,42 +101,22 @@ for ($i = 0; $i < count($pColumns); $i++) {
     }
 }
 
-/* stream */
-if (isset($_GET["stream"]) && $_GET["stream"] != "") {
-  if ($sWhere == "") {
-      $sWhere = "WHERE ";
-  } else {
-      $sWhere .= " AND ";
-  }
+if ($sWhere == "") $sWhere = "WHERE ";
+else $sWhere .= " AND ";
+$sWhere .= " stream = '" . mysqli_real_escape_string($mysqli, $stream) . "'";
+$sWhere .= "AND substream = '" . mysqli_real_escape_string($mysqli, $substream) . "'";
 
-  $sWhere .= " stream = '" . mysqli_real_escape_string($mysqli, $_GET["stream"]) . "'";
+/* date */
+if (isset($_POST["date_start"]) && $_POST["date_start"] != "" && isset($_POST["date_end"]) && $_POST["date_end"] != "") {
+  $date = DateTime::createFromFormat('Y-m-d', $_POST["date_start"]);
+  $date->modify('today');
+  $start = $date->getTimestamp();
 
-  if (isset($_GET["substream"]) && $_GET["substream"] != "") {
-    $sWhere .= " AND substream = '" . mysqli_real_escape_string($mysqli, $_GET["substream"]) . "'";
-  }
+  $date = DateTime::createFromFormat('Y-m-d', $_POST["date_end"]);
+  $date->modify('tomorrow');
+  $end = $date->getTimestamp();
 
-  /* date */
-  if (isset($_GET["timestamp"]) && $_GET["timestamp"] != "") {
-    $timestamp = mysqli_real_escape_string($mysqli, $_GET["timestamp"]);
-    if ($timestamp == "current") {
-      $result = mysqli_query($mysqli, "SELECT `value` AS val FROM `settings` WHERE `name` = 'current_" . 
-        mysqli_real_escape_string($mysqli, $_GET["stream"]) . "'");
-      $row = mysqli_fetch_assoc($result);
-      $timestamp = $row['val'];
-
-      $sWhere .= " AND ";
-      $sWhere .= " `timestamp` >= $timestamp ";
-    } else {
-      $sQuery = "SELECT MAX(`time`) as maxtime FROM `current` WHERE `time` < $timestamp";
-      ($result = mysqli_query($mysqli, $sQuery)) or die(mysqli_error($mysqli));
-      $row = mysqli_fetch_assoc($result);
-  
-      $maxtime = ($row['maxtime'] == NULL) ? 0 : $row['maxtime'];
-  
-      $sWhere .= " AND ";
-      $sWhere .= " `timestamp` >= $maxtime AND `timestamp` < $timestamp ";
-    }
-  }
+  $sWhere .= " AND `timestamp` >= $start AND `timestamp` < $end ";
 }
 
 
@@ -133,12 +132,14 @@ $out["draw"] = $draw;
 
 /* count rows */
 
-$sQuery = "SELECT COUNT(*) AS cnt FROM $sTable";
-($result = mysqli_query($mysqli, $sQuery)) or die(mysqli_error($mysqli));
-$row = mysqli_fetch_assoc($result);
-$out["recordsTotal"] = $row['cnt'];
+// $sQuery = "SELECT COUNT(*) AS cnt FROM $sTable";
+// ($result = mysqli_query($mysqli, $sQuery)) or die(mysqli_error($mysqli));
+// $row = mysqli_fetch_assoc($result);
+// $out["recordsTotal"] = $row['cnt'];
+$out["recordsTotal"] = 0;
 
 $sQuery = "SELECT COUNT(*) AS cnt FROM $sTable $sWhere";
+// echo $sQuery;
 // file_put_contents("test.txt", $sQuery);
 ($result = mysqli_query($mysqli, $sQuery)) or die(mysqli_error($mysqli));
 $row = mysqli_fetch_assoc($result);

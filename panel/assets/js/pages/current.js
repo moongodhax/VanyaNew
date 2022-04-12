@@ -3,6 +3,7 @@ var app = new Vue({
   data: {
     streams: [],
     selectedStream: "",
+    selectedSubstream: "",
     currentDates: [],
     selectedDate: "",
   },
@@ -12,7 +13,7 @@ var app = new Vue({
       serverSide: true,
       ajax: function (data, callback, settings) {
         if (self.selectedStream == "" || self.selectedDate == "") return callback([]);
-        $.post(`/datatables.php?stream=${self.selectedStream}&timestamp=${self.selectedDate}`, data)
+        $.post(`/datatables.php?stream=${self.selectedStream}&substream=${self.selectedSubstream}&timestamp=${self.selectedDate}`, data)
         .done(function (data) {
           callback(JSON.parse(data));
         })
@@ -24,6 +25,10 @@ var app = new Vue({
         url: "//cdn.datatables.net/plug-ins/1.10.19/i18n/Russian.json"
       },
       columns: [
+        {
+          title: "Подпоток",
+          data: "substream"
+        },
         {
           title: "IP",
           data: "ip",
@@ -66,7 +71,7 @@ var app = new Vue({
           }
         },
       ],
-      order: [[3, "desc"]],
+      order: [[5, "desc"]],
     });
     
     this.updateStreams();
@@ -87,6 +92,8 @@ var app = new Vue({
         if (self.streams.length > 0) {
           self.$nextTick(() => {
             self.selectedStream = self.streams[0].stream;
+            $("#type_header").html(self.selectedStream);
+            self.updateDates();
           })
         }
       })
@@ -110,7 +117,7 @@ var app = new Vue({
           self.$nextTick(() => {
             self.selectedDate = self.currentDates[0].time;
             $("#current-table").DataTable().ajax.reload();
-            $("#date_header").html($(this).find("option:selected").text());
+            $("#date_header").html(self.currentDates[0].name);
           })
         }
       })
@@ -131,12 +138,24 @@ var app = new Vue({
       .catch(function (error) {
         Toastify({ text: "Произошла ошибка во время очистки текущей таблицы", className: "bg-gradient-danger border-radius-lg" }).showToast();
       });
+    },
+    streamSelected: function() {
+      let selected_option = $("#type_select").find(":selected");
+      this.selectedStream = selected_option.data("stream");
+      this.selectedSubstream = selected_option.data("substream");
+
+      let header = this.selectedStream;
+      if (this.selectedSubstream != "") header += " - " + this.selectedSubstream
+
+      $("#type_header").html(header);
+
+      this.updateDates();
     }
   },
   watch: {
-    selectedStream: function (val) {
-      this.updateDates();
-    },
+    selectedDate: function(value) {
+      $("#current-table").DataTable().ajax.reload();
+    }
   }
 });
 

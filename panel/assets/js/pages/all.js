@@ -84,6 +84,6 @@ $(document).ready(function () {
           }
         },
       ],
-      order: [[5, "desc"]],
+      order: [[6, "desc"]],
     });
 });

@@ -32,30 +32,25 @@
                 </div>
               </div>
               <div class="card-body">
-                <h6 class="mb-0 text-uppercase">{{ stat.name }}</h6>
+                <h6 class="mb-0 text-uppercase d-flex" v-if="stat.type == 'stream'">
+                  {{ stat.name }}
+                </h6>
+                
+                <template v-else>
+                  <h6 class="mb-0 text-uppercase d-flex">
+                    <span class="badge badge-sm bg-gradient-success me-2">{{ stat.parentname }}</span>{{ stat.name }} 
+                  </h6>
+                  <a class="btn btn-link text-secondary text-sm mb-0 p-0 ms-2" target="_blank" :href="getStreamLink(stat.hash)">
+                    <i class="fas fa-external-link-alt"></i></a>
+                  <button class="btn btn-link text-secondary text-sm mb-0 p-0 ms-2" @click="copyStreamLink(stat.hash)">
+                    <i class="fas fa-copy"></i></button>
+                </template>
               </div>
             </div>
           </div>
         </div>
 
-        <div class="row mt-4">
-          <div class="col-12">
-            <div class="card z-index-2">
-              <div class="card-header p-0 position-relative mt-n4 mx-3 z-index-2 bg-transparent">
-                <div class="bg-gradient-success shadow-success border-radius-lg py-3 pe-1">
-                  <div class="chart">
-                    <canvas id="chart-line" class="chart-canvas" height="170"></canvas>
-                  </div>
-                </div>
-              </div>
-              <div class="card-body">
-                <h6 class="mb-0 ">График посещаемости</h6>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="row mt-4">
+        <div class="row">
           <div class="col-sm-12 col-md-8">
             <div class="card my-4">
               <div class="card-header p-0 position-relative mt-n4 mx-3 z-index-2">
@@ -89,6 +84,23 @@
                   <table class="table align-items-center mb-0" id="countries-table">
                   </table>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row mt-4">
+          <div class="col-12">
+            <div class="card z-index-2">
+              <div class="card-header p-0 position-relative mt-n4 mx-3 z-index-2 bg-transparent">
+                <div class="bg-gradient-success shadow-success border-radius-lg py-3 pe-1">
+                  <div class="chart" style="height: 350px">
+                    <canvas id="chart-line" class="chart-canvas"></canvas>
+                  </div>
+                </div>
+              </div>
+              <div class="card-body">
+                <h6 class="mb-0 ">График посещаемости</h6>
               </div>
             </div>
           </div>

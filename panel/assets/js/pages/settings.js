@@ -14,10 +14,36 @@ var app = new Vue({
     selectedStream: 0,
     params: [],
     selectedParams: [],
+    countriesSelect: null,
   },
   mounted: function () {
+    let self = this;
+
+    let tmp_select = $('#countries-select').selectize();
+    this.countriesSelect = tmp_select[0].selectize;
+
+    this.countriesSelect.on("change", function() {
+      let countries = JSON.stringify($("#countries-select").val());
+      axios({
+        method: "get",
+        url:`/api/banCountries?countries=${countries}`,
+      })
+      .then(function (response) {
+        if(response.data.success == true) {
+          Toastify({ text: "Успешно установил страны", className: "bg-gradient-success border-radius-lg" }).showToast();
+        }
+        else {
+          Toastify({ text: "Произошла ошибка", className: "bg-gradient-danger border-radius-lg" }).showToast();
+        }
+      })
+      .catch(function (error) {
+        Toastify({ text: "Произошла ошибка во время установки стран", className: "bg-gradient-danger border-radius-lg" }).showToast();
+      });
+    });
+
     this.updateStreams();
     this.updateParams();
+    this.updateCountries();
   },
   methods: {
     updateStreams: function() {
@@ -50,6 +76,24 @@ var app = new Vue({
       })
       .catch(function (error) {
         Toastify({ text: "Произошла ошибка во время получения параметров", className: "bg-gradient-danger border-radius-lg" }).showToast();
+      });
+    },
+    updateCountries: function() {
+      let self = this;
+      axios({
+        method: "get",
+        url: '/api/getBannedCountries',
+      })
+      .then(function (response) {
+        let countries = JSON.parse(response.data);
+        if(countries != null) {
+          countries.forEach(element => {
+            self.countriesSelect.addItem(element, true);
+          });
+        }
+      })
+      .catch(function (error) {
+        Toastify({ text: "Произошла ошибка во время загрузки стран", className: "bg-gradient-danger border-radius-lg" }).showToast();
       });
     },
 

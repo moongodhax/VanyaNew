@@ -42,6 +42,7 @@ function addStream($name) {
 
 function addSubstream($streamid, $name) {
   global $mysqli;
+  global $SALT;
 
   $streamid = mysqli_real_escape_string($mysqli, $streamid);
   $name = mysqli_real_escape_string($mysqli, $name);
@@ -54,7 +55,9 @@ function addSubstream($streamid, $name) {
   $row = mysqli_fetch_assoc($result);
   if ($row['cnt'] > 0) return false;
 
-  mysqli_query($mysqli, "INSERT INTO `substreams` (`streamid`, `name`) VALUES ($streamid, '$name')");
+  $hash = md5($name . $SALT);
+
+  mysqli_query($mysqli, "INSERT INTO `substreams` (`streamid`, `name`, `hash`) VALUES ($streamid, '$name', '$hash')");
   return true;
 }
 
@@ -75,7 +78,8 @@ function getStreams() {
   while($row = mysqli_fetch_assoc($result)) {
     $streams[$row['streamid']]["substreams"][] = [
       "id" => $row['id'],
-      "name" => $row['name']
+      "name" => $row['name'],
+      "hash" => $row['hash'],
     ];
   }
 
@@ -99,43 +103,6 @@ function removeSubstreams($substream_ids) {
   $substream_ids = mysqli_real_escape_string($mysqli, $substream_ids);
 
   mysqli_query($mysqli, "DELETE FROM `substreams` WHERE `id` IN ($substream_ids)");
-}
-
-function addPayload($name) {
-  global $mysqli;
-
-  $name = mysqli_real_escape_string($mysqli, $name);
-  $name = strtolower($name);
-
-  $result = mysqli_query($mysqli, "SELECT COUNT(*) AS cnt FROM `payloads` WHERE `name` = '$name'");
-  $row = mysqli_fetch_assoc($result);
-  if ($row['cnt'] > 0) return false;
-
-  mysqli_query($mysqli, "INSERT INTO `payloads` (`name`) VALUES ('$name')");
-  return true;
-}
-
-function removePayloads($ids) {
-  global $mysqli;
-
-  $ids = mysqli_real_escape_string($mysqli, $ids);
-
-  mysqli_query($mysqli, "DELETE FROM `payloads` WHERE `id` IN ($ids)");
-}
-
-function getPayloads() {
-  global $mysqli;
-
-  $payloads = [];
-  $result = mysqli_query($mysqli, "SELECT * FROM `payloads`");
-  while($row = mysqli_fetch_assoc($result)) {
-    $payloads[] = [
-      "id" => $row['id'],
-      "name" => $row['name']
-    ];
-  }
-
-  return $payloads;
 }
 
 ?>

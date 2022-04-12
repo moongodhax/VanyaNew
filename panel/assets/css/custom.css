@@ -78,10 +78,6 @@ div.dataTables_processing {
   background-color: #7b809a !important;
 }
 
-.slick {
-  padding-bottom: 30px;
-}
-
 .slick-arrow {
   background-color: rgba(255, 255, 255, 0.7);
   height: 26px;
@@ -111,4 +107,9 @@ div.dataTables_processing {
   top: 50%;
   margin-top: -50px;
   right: 15px;
+}
+
+.dropdown-menu {
+  max-height: 300px;
+  overflow: auto;
 }

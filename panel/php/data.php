@@ -15,22 +15,26 @@ function getStreamStats($current_ts, $stream, $substream = "") {
 
   $out = ["current" => 0, "hour" => 0, "day" => 0, "7days" => 0];
 
-  $result = mysqli_query($mysqli, "SELECT COUNT(*) AS cnt FROM `records` WHERE `timestamp` > $current_ts AND `stream` = '$stream' AND `stream` != 'decline' AND `stream` != 'blacklist' $substream");
+  $and = "AND `stream` != 'decline' AND `stream` != 'blacklist'  AND `stream` != 'banned'";
+
+  $result = mysqli_query($mysqli, "SELECT COUNT(*) AS cnt FROM `records` WHERE `timestamp` > $current_ts AND `stream` = '$stream'  $substream");
   $row = mysqli_fetch_assoc($result);
   $out["current"] = $row['cnt'];
 
   $t = time() - 3600;
-  $result = mysqli_query($mysqli, "SELECT COUNT(*) AS cnt FROM `records` WHERE `timestamp` > {$t} AND `stream` = '$stream' AND `stream` != 'decline' AND `stream` != 'blacklist' $substream");
+  $result = mysqli_query($mysqli, "SELECT COUNT(*) AS cnt FROM `records` WHERE `timestamp` > {$t} AND `stream` = '$stream' $and $substream");
   $row = mysqli_fetch_assoc($result);
   $out["hour"] = $row['cnt'];
 
-  $t = time() - 3600 * 24;
-  $result = mysqli_query($mysqli, "SELECT COUNT(*) AS cnt FROM `records` WHERE `timestamp` > {$t} AND `stream` = '$stream' AND `stream` != 'decline' AND `stream` != 'blacklist' $substream");
+  $date = new DateTime();
+  $date->modify('today');
+  $t = $date->getTimestamp();
+  $result = mysqli_query($mysqli, "SELECT COUNT(*) AS cnt FROM `records` WHERE `timestamp` > {$t} AND `stream` = '$stream' $and $substream");
   $row = mysqli_fetch_assoc($result);
   $out["day"] = $row['cnt'];
 
   $t = time() - 3600 * 24 * 7;
-  $result = mysqli_query($mysqli, "SELECT COUNT(*) AS cnt FROM `records` WHERE `timestamp` > {$t} AND `stream` = '$stream' AND `stream` != 'decline' AND `stream` != 'blacklist' $substream");
+  $result = mysqli_query($mysqli, "SELECT COUNT(*) AS cnt FROM `records` WHERE `timestamp` > {$t} AND `stream` = '$stream' $and $substream");
   $row = mysqli_fetch_assoc($result);
   $out["7days"] = $row['cnt'];
 
@@ -50,7 +54,9 @@ function getAllStats() {
     foreach ($stream['substreams'] as $substream) {
       $out[] = [
         "type" => "substream",
-        "name" => $stream['stream'] . " / " . $substream["name"],
+        "parentname" => $stream['stream'],
+        "name" => $substream["name"],
+        "hash" => $substream["hash"],
         "stats" => getStreamStats($current_ts, $stream['stream'], $substream["name"])
       ];
     }
@@ -66,7 +72,7 @@ function getMap($stream, $substream = "") {
 
   $substream = ($substream == "") ? "" : " AND `substream` = '$substream'";
 
-  $where = ($stream == "all") ? "WHERE `stream` != 'decline' AND `stream` != 'blacklist'" : "WHERE `stream` = '$stream' AND `stream` != 'decline' AND `stream` != 'blacklist' $substream";
+  $where = ($stream == "all") ? "WHERE `stream` != 'decline' AND `stream` != 'blacklist'" : "WHERE `stream` = '$stream' AND `stream` != 'decline' AND `stream` != 'blacklist' AND `stream` != 'banned' $substream";
   $and = ($stream == "all") ? "" : "AND `stream` = '$stream' $substream";
 
   $countries = [
@@ -107,7 +113,7 @@ function getMap($stream, $substream = "") {
       $q .= "COUNT(CASE WHEN `country` = '$v' $and THEN 1 END) AS '$v',\n";
     }
     $q = substr($q, 0, -2);
-    $q .= "\nFROM `records` WHERE `stream` != 'decline' AND `stream` != 'blacklist'";
+    $q .= "\nFROM `records` WHERE `stream` != 'decline' AND `stream` != 'blacklist' AND `stream` != 'banned'";
 
     $result = mysqli_query($mysqli, $q);
     $row = mysqli_fetch_assoc($result);
@@ -136,8 +142,15 @@ function getCountries($countries) {
   return $out;
 }
 
-function getDayChartMonth() {
+function getDayChartMonth($stream, $substream = "") {
   global $mysqli;
+
+  $stream = mysqli_real_escape_string($mysqli, $stream);
+  $substream = mysqli_real_escape_string($mysqli, $substream);
+
+  $substream = ($substream == "") ? "" : " AND `substream` = '$substream'";
+
+  $where = ($stream == "all") ? "WHERE `stream` != 'decline' AND `stream` != 'blacklist'" : "WHERE `stream` = '$stream' $substream";
 
   $labels = [];
   $data = [];
@@ -158,7 +171,7 @@ function getDayChartMonth() {
   }
 
   $q = substr($q, 0, -2);
-  $q .= "\nFROM `records` WHERE `stream` != 'decline' AND `stream` != 'blacklist'";
+  $q .= "\nFROM `records` $where";
 
   $result = mysqli_query($mysqli, $q);
   $row = mysqli_fetch_assoc($result);

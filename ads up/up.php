@@ -25,14 +25,13 @@ if ($ip != "109.234.35.187") {
   die();
 }
 
-// $codes = ["MIX", "EU", "US", "D1", "D2", "D3", "D4", "HB"];
-if (!isset($_GET["stream"])){ //  || !in_array(strtoupper($_GET["stream"]), $codes)
+if (!isset($_GET["stream"])){
   die("0");
 }
 
-$filename = './files/' . strtoupper($_GET["stream"]) . ".file";
+$filename = './addons/' . strtoupper($_GET["stream"]) . ".file";
 
-$links = json_decode(file_get_contents("./files/links.json"), true);
+$links = json_decode(file_get_contents("./addons/_links.json"), true);
 $links[$_GET["stream"]] = "0";
 
 if (isset($_GET["url"])) {
@@ -42,22 +41,37 @@ if (isset($_GET["url"])) {
   }
 
   $links[$_GET["stream"]] = $url;
-  file_put_contents("./files/links.json", json_encode($links));
+  file_put_contents("./addons/_links.json", json_encode($links));
 
-  if (file_put_contents($filename, file_get_contents($url)) !== false) {
+  $contents = file_get_contents($url);
+  if (strlen($contents) < 1024) {
+    $out = date("\nd/m/Y H:i") . " up.php -> " . $_GET['stream'] . " -> $url -> downloaded < 1024";
+    file_put_contents(__DIR__ . "/addons/_links.log", $out, FILE_APPEND);
+    die("0");    
+  }
+  
+  if (file_put_contents($filename, $contents) !== false) {
+    $out = date("\nd/m/Y H:i") . " up.php -> " . $_GET['stream'] . " -> $url -> downloaded " . strlen($contents) . "b";
+    file_put_contents(__DIR__ . "/addons/_links.log", $out, FILE_APPEND);
     die("done");
   } else {
+    $out = date("\nd/m/Y H:i") . " up.php -> " . $_GET['stream'] . " -> $url -> download error";
+    file_put_contents(__DIR__ . "/addons/_links.log", $out, FILE_APPEND);
     die("0");
   }
-} else if (!empty($_FILES) && $_FILES['uploadfile']['size'] != 0 && $_FILES['uploadfile']['tmp_name'] != "none") {
-  file_put_contents("./files/links.json", json_encode($links));
+} else if (!empty($_FILES) && $_FILES['uploadfile']['size'] > 1024 && $_FILES['uploadfile']['tmp_name'] != "none") {
+  file_put_contents("./addons/_links.json", json_encode($links));
   if (move_uploaded_file($_FILES['uploadfile']['tmp_name'], $filename)) {
+    $out = date("\nd/m/Y H:i") . " up.php -> " . $_GET['stream'] . " -> uploaded " . $_FILES['uploadfile']['size'] . "b";
+    file_put_contents(__DIR__ . "/addons/_links.log", $out, FILE_APPEND);
     die("done");
   } else {
+    $out = date("\nd/m/Y H:i") . " up.php -> " . $_GET['stream'] . " -> $url -> upload error";
+    file_put_contents(__DIR__ . "/addons/_links.log", $out, FILE_APPEND);
     die("0");
   }
 } else {
-  file_put_contents("./files/links.json", json_encode($links));
+  file_put_contents("./addons/_links.json", json_encode($links));
   die("0");
 }
 

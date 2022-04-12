@@ -153,7 +153,6 @@ var app = new Vue({
 
     this.updateAllStats();
     this.updateStreams();
-    this.updateChart();
 
     this.showStream({ stream: "all" });
   },
@@ -165,10 +164,48 @@ var app = new Vue({
         url: '/api/getAllStats',
       })
       .then(function (response) {
-        self.allStats = [];
-        for(stream of response.data) {
-          self.allStats.push(stream);
+        let stats = [];
+        for(let stream of response.data) {
+          stats.push(stream);
         }
+
+        self.allStats = [null, null, null, null];
+        for (let i = 0; i < stats.length; i++) {
+          let stat = stats[i];
+          if (stat.type == "stream") {
+            if (stat.name == "mixone") {
+              self.allStats[0] = stat;
+              stats.splice(i, 1);
+              i--;
+            }
+            if (stat.name == "mixtwo") {
+              self.allStats[1] = stat;
+              stats.splice(i, 1);
+              i--;
+            }
+            if (stat.name == "eu") {
+              self.allStats[2] = stat;
+              stats.splice(i, 1);
+              i--;
+            }
+            if (stat.name == "us") {
+              self.allStats[3] = stat;
+              stats.splice(i, 1);
+              i--;
+            }
+          }
+        }
+
+        function compare(a, b) {
+          if (+a.stats.day < +b.stats.day) return 1;
+          if (+a.stats.day > +b.stats.day) return -1;
+          return 0;
+        }
+
+        stats.sort(compare);
+
+        self.allStats.push(...stats);
+
         self.$nextTick(() => {
           $('.slick').slick('refresh');
         })
@@ -185,7 +222,7 @@ var app = new Vue({
       })
       .then(function (response) {
         self.streams = [];
-        for(stream of response.data) {
+        for(let stream of response.data) {
           self.streams.push(stream);
         }
       })
@@ -193,22 +230,9 @@ var app = new Vue({
         Toastify({ text: "Произошла ошибка во время получения потоков", className: "bg-gradient-danger border-radius-lg" }).showToast();
       });
     },
-    updateChart: function() {
-      let self = this;
-      axios({
-        method: "get",
-        url: '/api/getInstallsChart',
-      })
-      .then(function (response) {
-        self.chart.data.labels = response.data.labels;
-        self.chart.data.datasets[0].data = response.data.data;
-        self.chart.update();
-      })
-      .catch(function (error) {
-        Toastify({ text: "Произошла ошибка во время получения графика", className: "bg-gradient-danger border-radius-lg" }).showToast();
-      });
-    },
     showStream(options) {
+      let self = this;
+
       this.selectedStream.stream = options.stream;
       this.selectedStream.substream = options.substream ? options.substream : "";
 
@@ -237,10 +261,56 @@ var app = new Vue({
           .draw()
           .rows.add(response.data.countries)
           .draw();
+        
+        self.chart.data.labels = response.data.chart.labels;
+        self.chart.data.datasets[0].data = response.data.chart.data;
+        self.chart.update();
       })
       .catch(function (error) {
         Toastify({ text: "Произошла ошибка во время получения статистики", className: "bg-gradient-danger border-radius-lg" }).showToast();
       });
-    }
+    },
+    getStreamLink(hash) {
+      let url = new URL(location.href);
+      let text = url.protocol + "//" + url.hostname + "/view/" + hash;
+      return text;
+    },
+    copyStreamLink(hash) {
+      var textArea = document.createElement("textarea");
+    
+      textArea.style.position = 'fixed';
+      textArea.style.top = 0;
+      textArea.style.left = 0;
+    
+      textArea.style.width = '2em';
+      textArea.style.height = '2em';
+    
+      textArea.style.padding = 0;
+    
+      textArea.style.border = 'none';
+      textArea.style.outline = 'none';
+      textArea.style.boxShadow = 'none';
+    
+      textArea.style.background = 'transparent';
+    
+      textArea.value = this.getStreamLink(hash);
+    
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+    
+      try {
+        var successful = document.execCommand('copy');
+        if (successful) {
+          Toastify({ text: "Скопировано", className: "bg-gradient-success border-radius-lg" }).showToast();
+        } else {
+          Toastify({ text: "Произошла ошибка", className: "bg-gradient-danger border-radius-lg" }).showToast();
+        }
+      } catch (err) {
+        Toastify({ text: "Произошла ошибка", className: "bg-gradient-danger border-radius-lg" }).showToast();
+      }
+    
+      document.body.removeChild(textArea);
+    },
   }
 });

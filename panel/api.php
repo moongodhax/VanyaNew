@@ -13,14 +13,11 @@ switch ($path) {
     echo json_encode(getAllStats());
   break;
 
-  case "/api/getInstallsChart":
-    echo json_encode(getDayChartMonth());
-  break;
-
   case "/api/getStreamStats":
     $map = getMap($_GET["stream"], (isset($_GET["substream"]) ? $_GET["substream"] : ""));
     $countries = getCountries($map);
-    echo json_encode(["map" => $map, "countries" => $countries]);
+    $chart = getDayChartMonth($_GET["stream"], (isset($_GET["substream"]) ? $_GET["substream"] : ""));
+    echo json_encode(["map" => $map, "countries" => $countries, "chart" => $chart]);
   break;
 
   /*
@@ -132,6 +129,13 @@ switch ($path) {
 
     setSetting("params", json_encode($params));
 
+    echo json_encode(["success" => true]);
+  break;
+  case "/api/getBannedCountries":
+    echo json_encode(getSetting("banned_countries"));
+  break;
+  case "/api/banCountries":
+    setSetting("banned_countries", $_GET["countries"]);
     echo json_encode(["success" => true]);
   break;
 }

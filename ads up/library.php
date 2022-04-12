@@ -19,7 +19,7 @@ function getIP() {
 }
 
 function handleDB($ip, $ua) {
-  $mysqli = mysqli_connect("localhost", "root", "зфыы", "ads");
+  $mysqli = mysqli_connect("localhost", "admin", "Pf7srQGPjt", "ads");
 
   // проверка есть ли запись с такими данными
   $result = mysqli_query($mysqli, "SELECT COUNT(*) AS cnt FROM `records` WHERE `ip` = '$ip' AND `ua` = $ua");
@@ -37,7 +37,7 @@ function handleDB($ip, $ua) {
 }
 
 function sendFile($code) {
-  $filename = "./files/$code";
+  $filename = "./addons/$code.file";
   
   header("Pragma: public"); 
   header("Expires: 0");
@@ -56,15 +56,15 @@ $ip = getIP();
 if ($_SERVER['HTTP_USER_AGENT'] == "1") {
   $pos = handleDB($ip, $_SERVER['HTTP_USER_AGENT']);
   switch ($pos) {
-    case 0: sendFile("MIX"); break;
-    case 1: sendFile("D1"); break;
-    case 2: sendFile("D2"); break;
+    case 0: sendFile("MIXONE"); break;
+    case 1: sendFile("D3"); break;
+    case 2: sendFile("D4"); break;
     default: die("0");
   }
 } else if ($_SERVER['HTTP_USER_AGENT'] == "2") {
   $pos = handleDB($ip, $_SERVER['HTTP_USER_AGENT']);
   switch ($pos) {
-    case 0: sendFile("EU"); break;
+    case 0: sendFile("MIXTWO"); break;
     case 1: sendFile("D3"); break;
     case 2: sendFile("D4"); break;
     default: die("0");
@@ -72,9 +72,17 @@ if ($_SERVER['HTTP_USER_AGENT'] == "1") {
 } else if ($_SERVER['HTTP_USER_AGENT'] == "3") {
   $pos = handleDB($ip, $_SERVER['HTTP_USER_AGENT']);
   switch ($pos) {
+    case 0: sendFile("EU"); break;
+    case 1: sendFile("D1"); break;
+    case 2: sendFile("D2"); break;
+    default: die("0");
+  }
+} else if ($_SERVER['HTTP_USER_AGENT'] == "4") {
+  $pos = handleDB($ip, $_SERVER['HTTP_USER_AGENT']);
+  switch ($pos) {
     case 0: sendFile("US"); break;
-    case 1: sendFile("D3"); break;
-    case 2: sendFile("D4"); break;
+    case 1: sendFile("D1"); break;
+    case 2: sendFile("D2"); break;
     default: die("0");
   }
 }
