@@ -7,8 +7,8 @@
                   <select class="form-control" id="type_select" @change="streamSelected()">
                     <template v-for="stream in streams">
                       <optgroup :label="stream.stream">
-                        <option :data-stream="stream.stream" :data-substream="''">{{ stream.stream }}</option>
-                        <option :data-stream="stream.stream" :data-substream="sub.name" v-for="sub in stream.substreams">{{ stream.stream }} &mdash; {{ sub.name }}</option>
+                        <option :data-stream="stream.id" :data-substream="''">{{ stream.stream }}</option>
+                        <option :data-stream="stream.id" :data-substream="sub.id" v-for="sub in stream.substreams">{{ stream.stream }} &mdash; {{ sub.name }}</option>
                       </optgroup>
                     </template>
                   </select>
@@ -29,11 +29,8 @@
           <div class="col-12">
             <div class="card my-4">
               <div class="card-header p-0 position-relative mt-n4 mx-3 z-index-2">
-                <div class="bg-gradient-primary shadow-primary border-radius-lg pt-4 pb-3 header-with-button">
+                <div class="bg-gradient-primary shadow-primary border-radius-lg pt-4 pb-3">
                   <h6 class="text-white text-capitalize ps-3"><span id="type_header">MIX</span> <span id="date_header">Текущий</span></h6>
-                  <a href="javascript:;" @click="clearCurrent()" class="text-white font-weight-bold text-s" title="Очистить таблицу">
-                    <i class="fas fa-trash-alt"></i>
-                  </a>
                 </div>
               </div>
               <div class="card-body">

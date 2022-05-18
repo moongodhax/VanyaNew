@@ -4,76 +4,97 @@ require_once(__DIR__ . "/mysqli.php");
 
 require_once(__DIR__ . "/settings.php");
 
-date_default_timezone_set('Europe/Moscow');
-
 $SALT = "zslkjvlzskj";
 
-function getStreamStats($current_ts, $stream, $substream = "") {
+function getAllStats() {
   global $mysqli;
 
-  $substream = ($substream == "") ? "" : " AND `substream` = '$substream'";
-
-  $out = ["current" => 0, "hour" => 0, "day" => 0, "7days" => 0];
-
-  $and = "AND `stream` != 'decline' AND `stream` != 'blacklist'  AND `stream` != 'banned'";
-
-  $result = mysqli_query($mysqli, "SELECT COUNT(*) AS cnt FROM `records` WHERE `timestamp` > $current_ts AND `stream` = '$stream'  $substream");
-  $row = mysqli_fetch_assoc($result);
-  $out["current"] = $row['cnt'];
-
-  $t = time() - 3600;
-  $result = mysqli_query($mysqli, "SELECT COUNT(*) AS cnt FROM `records` WHERE `timestamp` > {$t} AND `stream` = '$stream' $and $substream");
-  $row = mysqli_fetch_assoc($result);
-  $out["hour"] = $row['cnt'];
+  $streams = getStreams();
+  
+  $hour = time() - 3600;
+  $week = time() - 3600 * 24 * 7;
 
   $date = new DateTime();
   $date->modify('today');
-  $t = $date->getTimestamp();
-  $result = mysqli_query($mysqli, "SELECT COUNT(*) AS cnt FROM `records` WHERE `timestamp` > {$t} AND `stream` = '$stream' $and $substream");
-  $row = mysqli_fetch_assoc($result);
-  $out["day"] = $row['cnt'];
+  $today = $date->getTimestamp();
 
-  $t = time() - 3600 * 24 * 7;
-  $result = mysqli_query($mysqli, "SELECT COUNT(*) AS cnt FROM `records` WHERE `timestamp` > {$t} AND `stream` = '$stream' $and $substream");
-  $row = mysqli_fetch_assoc($result);
-  $out["7days"] = $row['cnt'];
-
-  return $out;
-}
-
-function getAllStats() {
-  $out = [];
-  $streams = getStreams();
+  $q = "SELECT  \n";
   foreach ($streams as $stream) {
-    $current_ts = getSetting("current_" . $stream['stream']);
+    $current_ts = $stream['current_ts'];
+    $stream_id = $stream["id"];
+
+    $q .= "COUNT(CASE WHEN `timestamp` > $current_ts AND `streamid` = '$stream_id' THEN 1 END) AS '{$stream_id}_current',\n";
+    $q .= "COUNT(CASE WHEN `timestamp` > $hour AND `streamid` = '$stream_id' THEN 1 END) AS '{$stream_id}_hour',\n";
+    $q .= "COUNT(CASE WHEN `timestamp` > $today AND `streamid` = '$stream_id' THEN 1 END) AS '{$stream_id}_day',\n";
+    $q .= "COUNT(CASE WHEN `timestamp` > $week AND `streamid` = '$stream_id' THEN 1 END) AS '{$stream_id}_week',\n";
+
+    foreach ($stream['substreams'] as $substream) {
+      $substream_id = $substream["id"];
+      $q .= "COUNT(CASE WHEN `timestamp` > $current_ts AND `streamid` = '$stream_id' AND `substreamid` = '$substream_id' THEN 1 END) AS '{$stream_id}_{$substream_id}_current',\n";
+      $q .= "COUNT(CASE WHEN `timestamp` > $hour AND `streamid` = '$stream_id' AND `substreamid` = '$substream_id' THEN 1 END) AS '{$stream_id}_{$substream_id}_hour',\n";
+      $q .= "COUNT(CASE WHEN `timestamp` > $today AND `streamid` = '$stream_id' AND `substreamid` = '$substream_id' THEN 1 END) AS '{$stream_id}_{$substream_id}_day',\n";
+      $q .= "COUNT(CASE WHEN `timestamp` > $week AND `streamid` = '$stream_id' AND `substreamid` = '$substream_id' THEN 1 END) AS '{$stream_id}_{$substream_id}_week',\n";
+    }
+  }
+  $q = substr($q, 0, -2);
+  $q .= "\nFROM\n";
+  $q .= "
+  (
+    SELECT MIN(`id`), ANY_VALUE(`timestamp`) as 'timestamp', ANY_VALUE(`streamid`) as 'streamid', ANY_VALUE(`substreamid`) as 'substreamid'
+    FROM `records` 
+    WHERE `type` = 'ok'
+    GROUP BY `ip`
+  ) a
+  ";
+
+  $result = mysqli_query($mysqli, $q);
+  $row = mysqli_fetch_assoc($result);
+
+  $out = [];
+  foreach ($streams as $stream) {
+    $stream_id = $stream["id"];
     $out[] = [
       "type" => "stream",
       "name" => $stream['stream'],
-      "stats" => getStreamStats($current_ts, $stream['stream'])
+      "color" => $stream['color'],
+      "position" => $stream['position'],
+      "stats" => [
+        "current" => $row["{$stream_id}_current"], 
+        "hour" => $row["{$stream_id}_hour"], 
+        "day" => $row["{$stream_id}_day"], 
+        "7days" => $row["{$stream_id}_week"]
+      ]
     ];
+
     foreach ($stream['substreams'] as $substream) {
+      $substream_id = $substream["id"];
       $out[] = [
         "type" => "substream",
         "parentname" => $stream['stream'],
+        "parentcolor" => $stream['color'],
         "name" => $substream["name"],
         "hash" => $substream["hash"],
-        "stats" => getStreamStats($current_ts, $stream['stream'], $substream["name"])
+        "position" => $substream["position"],
+        "stats" => [
+          "current" => $row["{$stream_id}_{$substream_id}_current"], 
+          "hour" => $row["{$stream_id}_{$substream_id}_hour"], 
+          "day" => $row["{$stream_id}_{$substream_id}_day"], 
+          "7days" => $row["{$stream_id}_{$substream_id}_week"]
+        ]
       ];
     }
   }
   return $out;
 }
 
-function getMap($stream, $substream = "") {
+function getMap($streamid, $substreamid = 0) {
   global $mysqli;
 
-  $stream = mysqli_real_escape_string($mysqli, $stream);
-  $substream = mysqli_real_escape_string($mysqli, $substream);
+  $streamid = mysqli_real_escape_string($mysqli, $streamid);
+  $substreamid = mysqli_real_escape_string($mysqli, $substreamid);
 
-  $substream = ($substream == "") ? "" : " AND `substream` = '$substream'";
-
-  $where = ($stream == "all") ? "WHERE `stream` != 'decline' AND `stream` != 'blacklist'" : "WHERE `stream` = '$stream' AND `stream` != 'decline' AND `stream` != 'blacklist' AND `stream` != 'banned' $substream";
-  $and = ($stream == "all") ? "" : "AND `stream` = '$stream' $substream";
+  $and = ($streamid == 0) ? "" : "AND `streamid` = '$streamid'";
+  if ($substreamid != 0) $and .= " AND `substreamid` = '$substreamid'";
 
   $countries = [
     "AF" => 0, "AL" => 0, "DZ" => 0, "AO" => 0, "AG" => 0, "AR" => 0, "AM" => 0, "AU" => 0, "AT" => 0,
@@ -102,7 +123,7 @@ function getMap($stream, $substream = "") {
   
   $unique = [];
   
-  $result = mysqli_query($mysqli, "SELECT DISTINCT `country` FROM `records` $where ");
+  $result = mysqli_query($mysqli, "SELECT DISTINCT `country` FROM `records` WHERE `type` = 'ok' $and ");
   while($row = mysqli_fetch_assoc($result)) {
     $unique[] = $row['country'];
   }
@@ -113,7 +134,15 @@ function getMap($stream, $substream = "") {
       $q .= "COUNT(CASE WHEN `country` = '$v' $and THEN 1 END) AS '$v',\n";
     }
     $q = substr($q, 0, -2);
-    $q .= "\nFROM `records` WHERE `stream` != 'decline' AND `stream` != 'blacklist' AND `stream` != 'banned'";
+    $q .= "\nFROM\n";
+    $q .= "
+    (
+      SELECT MIN(`id`), ANY_VALUE(`country`) as 'country', ANY_VALUE(`streamid`) as 'streamid', ANY_VALUE(`substreamid`) as 'substreamid'
+      FROM `records` 
+      WHERE `type` = 'ok'
+      GROUP BY `ip`
+    ) a
+    ";
 
     $result = mysqli_query($mysqli, $q);
     $row = mysqli_fetch_assoc($result);
@@ -142,15 +171,14 @@ function getCountries($countries) {
   return $out;
 }
 
-function getDayChartMonth($stream, $substream = "") {
+function getDayChartMonth($streamid, $substreamid = 0) {
   global $mysqli;
 
-  $stream = mysqli_real_escape_string($mysqli, $stream);
-  $substream = mysqli_real_escape_string($mysqli, $substream);
+  $streamid = mysqli_real_escape_string($mysqli, $streamid);
+  $substreamid = mysqli_real_escape_string($mysqli, $substreamid);
 
-  $substream = ($substream == "") ? "" : " AND `substream` = '$substream'";
-
-  $where = ($stream == "all") ? "WHERE `stream` != 'decline' AND `stream` != 'blacklist'" : "WHERE `stream` = '$stream' $substream";
+  $substreamid = ($substreamid != "") ? "AND `substreamid` = '$substreamid'" : "";
+  $and = ($streamid != 0) ? "AND `streamid` = '$streamid' $substreamid" : "";
 
   $labels = [];
   $data = [];
@@ -171,7 +199,15 @@ function getDayChartMonth($stream, $substream = "") {
   }
 
   $q = substr($q, 0, -2);
-  $q .= "\nFROM `records` $where";
+  $q .= "\nFROM\n";
+  $q .= "
+  (
+    SELECT MIN(`id`), ANY_VALUE(`timestamp`) as 'timestamp', ANY_VALUE(`streamid`) as 'streamid', ANY_VALUE(`substreamid`) as 'substreamid'
+    FROM `records` 
+    WHERE `type` = 'ok' $and
+    GROUP BY `ip`
+  ) a
+  ";
 
   $result = mysqli_query($mysqli, $q);
   $row = mysqli_fetch_assoc($result);
@@ -183,37 +219,21 @@ function getDayChartMonth($stream, $substream = "") {
   return ["labels" => $labels, "data" => $data];
 }
 
-function getCurrentDates($stream) {
+function getCurrentDates($streamid) {
   global $mysqli;
 
-  $stream = mysqli_real_escape_string($mysqli, $stream);
+  $streamid = mysqli_real_escape_string($mysqli, $streamid);
 
   $out = [];
-
-  $result = mysqli_query($mysqli, "SELECT `value` AS val FROM `settings` WHERE `name` = 'current_$stream'");
-  
-  $row = mysqli_fetch_assoc($result);
   $out[] = ["time" => "current", "name" => "Текущий"];
 
-  $result = mysqli_query($mysqli, "SELECT `time` FROM `current` WHERE `stream` = '$stream' ORDER BY `time` DESC");
+  $result = mysqli_query($mysqli, "SELECT `time` FROM `current` WHERE `streamid` = '$streamid' ORDER BY `time` DESC");
   
   while($row = mysqli_fetch_assoc($result)) {
     $out[] = ["time" => $row['time'], "name" => date("d/m/Y H:i", $row['time'])];
   }
 
   return $out;
-}
-
-function clearCurrent($stream) {
-  global $mysqli;
-
-  $stream = mysqli_real_escape_string($mysqli, $stream);
-  $time = time();
-
-  mysqli_query($mysqli, "UPDATE `settings` SET `value` = '$time' WHERE `name` = 'current_$stream'");
-
-  $q = "INSERT INTO `current` (`stream`, `time`) VALUES ('$stream', $time)";
-  mysqli_query($mysqli, $q);
 }
 
 function removeRecord($id) {

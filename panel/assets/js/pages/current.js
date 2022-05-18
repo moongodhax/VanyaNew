@@ -2,8 +2,8 @@ var app = new Vue({
   el: '#content',
   data: {
     streams: [],
-    selectedStream: "",
-    selectedSubstream: "",
+    selectedStreamid: 0,
+    selectedSubstreamid: 0,
     currentDates: [],
     selectedDate: "",
   },
@@ -12,8 +12,8 @@ var app = new Vue({
     $("#current-table").DataTable({
       serverSide: true,
       ajax: function (data, callback, settings) {
-        if (self.selectedStream == "" || self.selectedDate == "") return callback([]);
-        $.post(`/datatables.php?stream=${self.selectedStream}&substream=${self.selectedSubstream}&timestamp=${self.selectedDate}`, data)
+        if (self.selectedStreamid == 0 || self.selectedDate == "") return callback([]);
+        $.post(`/datatables.php?streamid=${self.selectedStreamid}&substreamid=${self.selectedSubstreamid}&timestamp=${self.selectedDate}`, data)
         .done(function (data) {
           callback(JSON.parse(data));
         })
@@ -28,6 +28,18 @@ var app = new Vue({
         {
           title: "Подпоток",
           data: "substream"
+        },
+        {
+          title: "Тип",
+          data: "type",
+          render: function( data, type, row, meta ) {
+            if (row.reason != "") return `${row.type} / ${row.reason}`;
+            else return data;
+          }
+        },
+        {
+          data: "reason",
+          visible: false,
         },
         {
           title: "IP",
@@ -71,7 +83,7 @@ var app = new Vue({
           }
         },
       ],
-      order: [[5, "desc"]],
+      order: [[7, "desc"]],
     });
     
     this.updateStreams();
@@ -89,10 +101,24 @@ var app = new Vue({
           self.streams.push(stream);
         }
 
+        function compare(a, b) {
+          if (a.position < b.position)
+            return -1;
+          if (a.position > b.position)
+            return 1;
+          return 0;
+        }
+        
+        self.streams.sort(compare);
+
+        for (let i = 0; i < self.streams.length; i++) {
+          self.streams[i].substreams.sort(compare);
+        }
+
         if (self.streams.length > 0) {
           self.$nextTick(() => {
-            self.selectedStream = self.streams[0].stream;
-            $("#type_header").html(self.selectedStream);
+            self.selectedStreamid = self.streams[0].id;
+            $("#type_header").html(self.streams[0].stream);
             self.updateDates();
           })
         }
@@ -105,7 +131,7 @@ var app = new Vue({
       let self = this;
       axios({
         method: "get",
-        url: '/api/getCurrentDates?stream=' + this.selectedStream,
+        url: '/api/getCurrentDates?streamid=' + this.selectedStreamid,
       })
       .then(function (response) {
         self.currentDates = [];
@@ -125,35 +151,18 @@ var app = new Vue({
         Toastify({ text: "Произошла ошибка во время получения дат", className: "bg-gradient-danger border-radius-lg" }).showToast();
       });
     },
-    clearCurrent: function() {
-      let self = this;
-      axios({
-        method: "get",
-        url: '/api/clearCurrent?stream=' + this.selectedStream,
-      })
-      .then(function (response) {
-        self.updateDates();
-        $("#current-table").DataTable().ajax.reload();
-      })
-      .catch(function (error) {
-        Toastify({ text: "Произошла ошибка во время очистки текущей таблицы", className: "bg-gradient-danger border-radius-lg" }).showToast();
-      });
-    },
     streamSelected: function() {
       let selected_option = $("#type_select").find(":selected");
-      this.selectedStream = selected_option.data("stream");
-      this.selectedSubstream = selected_option.data("substream");
-
-      let header = this.selectedStream;
-      if (this.selectedSubstream != "") header += " - " + this.selectedSubstream
-
-      $("#type_header").html(header);
-
+      this.selectedStreamid = selected_option.data("stream");
+      this.selectedSubstreamid = selected_option.data("substream");
+      $("#type_header").html(selected_option.text());
       this.updateDates();
     }
   },
   watch: {
     selectedDate: function(value) {
+      let selected_option = $("#date_select").find(":selected");
+      $("#date_header").html(selected_option.text());
       $("#current-table").DataTable().ajax.reload();
     }
   }

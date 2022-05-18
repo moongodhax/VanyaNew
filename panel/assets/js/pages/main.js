@@ -4,8 +4,8 @@ var app = new Vue({
     allStats: [],
     streams: [],
     selectedStream: {
-      stream: "",
-      substream: "",
+      streamid: 0,
+      substreamid: 0,
     },
     chart: null,
   },
@@ -154,7 +154,7 @@ var app = new Vue({
     this.updateAllStats();
     this.updateStreams();
 
-    this.showStream({ stream: "all" });
+    this.showStream(0);
   },
   methods: {
     updateAllStats: function() {
@@ -195,6 +195,8 @@ var app = new Vue({
             }
           }
         }
+        
+        self.allStats = self.allStats.filter(Boolean);
 
         function compare(a, b) {
           if (+a.stats.day < +b.stats.day) return 1;
@@ -225,22 +227,45 @@ var app = new Vue({
         for(let stream of response.data) {
           self.streams.push(stream);
         }
+
+        function compare(a, b) {
+          if (a.position < b.position)
+            return -1;
+          if (a.position > b.position)
+            return 1;
+          return 0;
+        }
+        
+        self.streams.sort(compare);
+
+        for (let i = 0; i < self.streams.length; i++) {
+          self.streams[i].substreams.sort(compare);
+        }
       })
       .catch(function (error) {
         Toastify({ text: "Произошла ошибка во время получения потоков", className: "bg-gradient-danger border-radius-lg" }).showToast();
       });
     },
-    showStream(options) {
+    showStream(streamid, substreamid = 0) {
       let self = this;
 
-      this.selectedStream.stream = options.stream;
-      this.selectedStream.substream = options.substream ? options.substream : "";
+      this.selectedStream.streamid = streamid;
+      this.selectedStream.substreamid = substreamid;
 
       $("#map").html("");
 
+      $("#countries-table")
+        .DataTable()
+        .clear()
+        .draw();
+      
+      self.chart.data.labels = [];
+      self.chart.data.datasets[0].data = [];
+      self.chart.update();
+
       axios({
         method: "get",
-        url: `/api/getStreamStats?stream=${this.selectedStream.stream}&substream=${this.selectedStream.substream}`,
+        url: `/api/getStreamStats?streamid=${streamid}&substreamid=${substreamid}`,
       })
       .then(function (response) {
         // если делать перезагрузку через регион, 
@@ -257,8 +282,6 @@ var app = new Vue({
 
         $("#countries-table")
           .DataTable()
-          .clear()
-          .draw()
           .rows.add(response.data.countries)
           .draw();
         
@@ -312,5 +335,70 @@ var app = new Vue({
     
       document.body.removeChild(textArea);
     },
+    hexToRGB(color, opacity) {
+      color = color.replace('#', '')
+      const r = parseInt(color.substring(0, 2), 16)
+      const g = parseInt(color.substring(2, 4), 16)
+      const b = parseInt(color.substring(4, 6), 16)
+      return `rgba(${r}, ${g}, ${b}, ${opacity})`
+    },
+    setStreamColor(event) {
+      let input = $(event.target);
+      let stream = input.data('stream');
+      let color = input.val().replace("#", "");
+      let self = this;
+      axios({
+        method: "get",
+        url: `/api/setStreamColor?stream=${stream}&color=${color}`,
+      })
+      .then(function (response) {
+        self.updateAllStats();
+        Toastify({ text: "Цвет установлен", className: "bg-gradient-success border-radius-lg" }).showToast();
+      })
+      .catch(function (error) {
+        Toastify({ text: "Произошла ошибка во время установки цвета", className: "bg-gradient-danger border-radius-lg" }).showToast();
+      });
+    },
+    clearSubstream(substream) {
+      if (confirm(`Вы действительно хотите очистить ${substream}?`)) {
+        let self = this;
+        axios({
+          method: "get",
+          url: `/api/clearSubstream?substream=${substream}`,
+        })
+        .then(function (response) {
+          if (response.data.success == true) {
+            self.updateAllStats();
+            Toastify({ text: "Поток очищен", className: "bg-gradient-success border-radius-lg" }).showToast();
+          } else throw 0;
+        })
+        .catch(function (error) {
+          Toastify({ text: "Произошла ошибка во время очистки потока", className: "bg-gradient-danger border-radius-lg" }).showToast();
+        });
+      }
+    }
+  },
+  computed: {
+    selectedStreamBtn: function () {
+      let btn_text = "";
+      if (this.selectedStream.streamid == 0 && this.selectedStream.substreamid == 0) return "Все";
+      else {
+        for (let stream of this.streams) {
+          if (stream.id == this.selectedStream.streamid) {
+            btn_text = stream.stream;
+            if (this.selectedStream.substreamid != 0) {
+              for (let substream of stream.substreams) {
+                if (substream.id == this.selectedStream.substreamid) {
+                  btn_text += " / " + substream.name;
+                }
+                break;
+              }
+            }
+            break;
+          }
+        }
+      }
+      return btn_text;
+    }
   }
 });

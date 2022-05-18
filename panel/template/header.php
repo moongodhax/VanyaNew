@@ -16,11 +16,11 @@
             </div>
           </a>
         </li>
-        <!-- <li class="nav-item ps-3 d-flex align-items-center">
+        <li class="nav-item ps-3 d-flex align-items-center">
           <a href="javascript:;" class="nav-link text-body p-0">
             <i class="fas fa-palette fixed-plugin-button-nav cursor-pointer"></i>
           </a>
-        </li> -->
+        </li>
         <li class="nav-item ps-3 d-flex align-items-center">
           <a href="/exit" class="nav-link text-body p-0">
             <i class="fas fa-sign-out-alt cursor-pointer"></i>

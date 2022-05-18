@@ -9,7 +9,7 @@ if (!isset($_SESSION["logined"]) || $_SESSION["logined"] != true) {
 require_once("php/mysqli.php");
 
 /* DB table to use */
-$sTable = "records";
+$sTable = "`records`";
 
 
 $draw = $_POST["draw"];
@@ -58,9 +58,11 @@ if ($_POST["search"]["value"] != "") {
 
     $sWhere = "WHERE (";
     for ($i = 0; $i < count($pColumns); $i++) {
+      if ($pColumns[$i]["data"] == "stream") continue;
+      if ($pColumns[$i]["data"] == "substream") continue;
       if ($pColumns[$i]["data"] != "") {
         $sWhere .=
-            $pColumns[$i]["data"] . " LIKE '%" .
+            $sTable . ".`" . $pColumns[$i]["data"] . "` LIKE '%" .
             mysqli_real_escape_string($mysqli, $pSearch["value"]) . "%' OR ";
       }
     }
@@ -70,6 +72,8 @@ if ($_POST["search"]["value"] != "") {
 
 /* Individual column filtering */
 for ($i = 0; $i < count($pColumns); $i++) {
+    if ($pColumns[$i]["data"] == "stream") continue;
+    if ($pColumns[$i]["data"] == "substream") continue;
     if ($pColumns[$i]["searchable"] == "true" && $pColumns[$i]["search"]["value"] != "" && $pColumns[$i]["data"] != "") {
         if ($sWhere == "") {
             $sWhere = "WHERE ";
@@ -77,31 +81,31 @@ for ($i = 0; $i < count($pColumns); $i++) {
             $sWhere .= " AND ";
         }
         $sWhere .=
-            $pColumns[$i]["data"] . " LIKE '%" . 
+            $sTable . ".`" . $pColumns[$i]["data"] . "` LIKE '%" . 
             mysqli_real_escape_string($mysqli, $pColumns[$i]["search"]["value"]) . "%' ";
     }
 }
 
 /* stream */
-if (isset($_GET["stream"]) && $_GET["stream"] != "") {
+if (isset($_GET["streamid"]) && $_GET["streamid"] != 0) {
   if ($sWhere == "") {
-      $sWhere = "WHERE ";
+    $sWhere = "WHERE ";
   } else {
-      $sWhere .= " AND ";
+    $sWhere .= " AND ";
   }
 
-  $sWhere .= " stream = '" . mysqli_real_escape_string($mysqli, $_GET["stream"]) . "'";
+  $sWhere .= $sTable . ".`streamid` = '" . mysqli_real_escape_string($mysqli, $_GET["streamid"]) . "'";
 
-  if (isset($_GET["substream"]) && $_GET["substream"] != "") {
-    $sWhere .= " AND substream = '" . mysqli_real_escape_string($mysqli, $_GET["substream"]) . "'";
+  if (isset($_GET["substreamid"]) && $_GET["substreamid"] != "") {
+    $sWhere .= " AND $sTable.`substreamid` = '" . mysqli_real_escape_string($mysqli, $_GET["substreamid"]) . "'";
   }
 
   /* date */
   if (isset($_GET["timestamp"]) && $_GET["timestamp"] != "") {
     $timestamp = mysqli_real_escape_string($mysqli, $_GET["timestamp"]);
     if ($timestamp == "current") {
-      $result = mysqli_query($mysqli, "SELECT `value` AS val FROM `settings` WHERE `name` = 'current_" . 
-        mysqli_real_escape_string($mysqli, $_GET["stream"]) . "'");
+      $result = mysqli_query($mysqli, "SELECT `current_ts` AS val FROM `streams` WHERE `id` = '" . 
+        mysqli_real_escape_string($mysqli, $_GET["streamid"]) . "'");
       $row = mysqli_fetch_assoc($result);
       $timestamp = $row['val'];
 
@@ -120,6 +124,11 @@ if (isset($_GET["stream"]) && $_GET["stream"] != "") {
   }
 }
 
+/* join */
+$sJoin = "
+LEFT JOIN `streams` ON `records`.`streamid` = `streams`.`id`
+LEFT JOIN `substreams` ON `records`.`substreamid` = `substreams`.`id`
+";
 
 /*
  * SQL queries
@@ -147,12 +156,14 @@ $out["recordsFiltered"] = $row['cnt'];
 
 /* get data */
 
-$columnsArr = ["id"];
+$columnsArr = ["`records`.`id`", "`streams`.`name` as 'stream'", "`substreams`.`name` as 'substream'"];
 foreach($pColumns as $c) {
-  if ($c["data"] != "") $columnsArr[] = $c["data"];
+  if ($c["data"] == "stream") continue;
+  if ($c["data"] == "substream") continue;
+  if ($c["data"] != "") $columnsArr[] = $sTable . "." . $c["data"];
 }
 
-$sQuery = "SELECT " . implode(", ", $columnsArr) . " FROM $sTable $sWhere $sOrder $sLimit";
+$sQuery = "SELECT " . implode(", ", $columnsArr) . " FROM $sTable $sJoin $sWhere $sOrder $sLimit";
 ($result = mysqli_query($mysqli, $sQuery)) or die(mysqli_error($mysqli));
 
 while ($row = mysqli_fetch_assoc($result)) {

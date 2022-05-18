@@ -1,13 +1,13 @@
 <?php
-
 require_once(__DIR__ . "/../php/mysqli.php");
 
 $url_array = parse_url($_SERVER['REQUEST_URI']);
 $path = $url_array["path"];
 $hash = str_replace("/view/", "", $path);
 
-$stream = null;
-$substream = null;
+$streamid = null;
+$substreamid = null;
+$substream_name = null;
 
 $hash = mysqli_real_escape_string($mysqli, $hash);
 
@@ -17,11 +17,9 @@ $row = mysqli_fetch_assoc($result);
 if ($row['cnt'] > 0) {
   $result = mysqli_query($mysqli, "SELECT * FROM `substreams` WHERE `hash` = '$hash'");
   $row = mysqli_fetch_assoc($result);
-  $substream = $row["name"];
-
-  $result = mysqli_query($mysqli, "SELECT * FROM `streams` WHERE `id` = " . $row["streamid"]);
-  $row = mysqli_fetch_assoc($result);
-  $stream = $row["name"];
+  $substreamid = $row["id"];
+  $substream_name = $row["name"];
+  $streamid = $row["streamid"];
 } else {
   header("HTTP/1.0 404 Not Found");
   die();
@@ -33,7 +31,7 @@ if (isset($_POST["get_stats"])) {
 
   $out = [];
   
-  $out["stream"] = $substream;
+  $out["stream"] = $substream_name;
 
   $dates = "";
   $date = null;
@@ -52,14 +50,25 @@ if (isset($_POST["get_stats"])) {
     $dates = "AND `timestamp` >= $start AND `timestamp` < $end";
   }
 
-  // всего
-  $result = mysqli_query($mysqli, "SELECT COUNT(*) AS cnt FROM `records` WHERE `stream` = '$stream' AND `substream` = '$substream' $dates");
+  $q = "
+  SELECT
+  COUNT(CASE WHEN `a`.`type` = 'ok' THEN 1 END) as 'success',
+  COUNT(CASE WHEN `a`.`type` = 'decline' OR `a`.`type` = 'banned' THEN 1 END) as 'decline'
+  FROM
+  (
+    SELECT MIN(`id`), ANY_VALUE(`type`) as 'type' FROM `records` 
+    WHERE `streamid` = '$streamid' AND `substreamid` = '$substreamid' AND (`type` = 'ok' OR `type` = 'decline' OR `type` = 'banned') $dates 
+    GROUP BY `ip`
+  ) a 
+  ";
+  $result = mysqli_query($mysqli, $q);
   $row = mysqli_fetch_assoc($result);
-  $out["total"] = $row['cnt'];
+  $out["success"] = $row['success'];
+  $out["decline"] = $row['decline'];
   
   // неделя
   $out["week"] = [];
-  $timestamps = [];
+  $days = [];
 
   if ($date_end != "") {
     $date = DateTime::createFromFormat('Y-m-d', $date_end);
@@ -78,31 +87,39 @@ if (isset($_POST["get_stats"])) {
 
     $q .= "COUNT(CASE WHEN `timestamp` >= {$ts} AND `timestamp` < {$ts2} THEN 1 END) AS $as,\n";
 
-    $timestamps[] = $ts;
+    $days[] = $date->format("m/d/Y (l)");
     $date->sub(new DateInterval('P1D'));
   }
 
   $q = substr($q, 0, -2);
-  $q .= "\nFROM `records` WHERE `stream` = '$stream' AND `substream` = '$substream'";
+  $q .= "\nFROM\n";
+  $q .= "
+  (
+    SELECT MIN(`id`), ANY_VALUE(`timestamp`) as 'timestamp'
+    FROM `records` 
+    WHERE `streamid` = '$streamid' AND `substreamid` = '$substreamid' AND `type` = 'ok'
+    GROUP BY `ip`
+  ) a
+  ";
 
   $result = mysqli_query($mysqli, $q);
   $row = mysqli_fetch_assoc($result);
 
   for ($i = 0; $i < 7; $i++) {
-    $out["week"][] = ["ts" => $timestamps[$i], "cnt" => $row["count$i"]];
+    $out["week"][] = ["day" => $days[$i], "cnt" => $row["count$i"]];
   }
 
-  $out["map"] = getMap($stream, $substream, $start, $end);
+  $out["map"] = getMap($streamid, $substreamid, $start, $end);
 
   echo json_encode($out);
   die();
 }
 
-function getMap($stream, $substream, $ts1, $ts2) {
+function getMap($streamid, $substreamid, $ts1, $ts2) {
   global $mysqli;
 
-  $stream = mysqli_real_escape_string($mysqli, $stream);
-  $substream = mysqli_real_escape_string($mysqli, $substream);
+  $streamid = mysqli_real_escape_string($mysqli, $streamid);
+  $substreamid = mysqli_real_escape_string($mysqli, $substreamid);
 
   $ts = "";
   if ($ts1 != "" && $ts2 != "") {
@@ -136,7 +153,7 @@ function getMap($stream, $substream, $ts1, $ts2) {
   
   $unique = [];
   
-  $result = mysqli_query($mysqli, "SELECT DISTINCT `country` FROM `records` WHERE `stream` = '$stream' AND `substream` = '$substream' $ts");
+  $result = mysqli_query($mysqli, "SELECT DISTINCT `country` FROM `records` WHERE `streamid` = '$streamid' AND `substreamid` = '$substreamid' $ts AND `type` = 'ok'");
   while($row = mysqli_fetch_assoc($result)) {
     $unique[] = $row['country'];
   }
@@ -147,7 +164,15 @@ function getMap($stream, $substream, $ts1, $ts2) {
       $q .= "COUNT(CASE WHEN `country` = '$v' THEN 1 END) AS '$v',\n";
     }
     $q = substr($q, 0, -2);
-    $q .= "\nFROM `records` WHERE `stream` = '$stream' AND `substream` = '$substream' $ts";
+    $q .= "\nFROM\n";
+    $q .= "
+    (
+      SELECT MIN(`id`), ANY_VALUE(`country`) as 'country', ANY_VALUE(`streamid`) as 'streamid', ANY_VALUE(`substreamid`) as 'substreamid'
+      FROM `records` 
+      WHERE `streamid` = '$streamid' AND `substreamid` = '$substreamid' $ts AND `type` = 'ok'
+      GROUP BY `ip`
+    ) a
+    ";
     
     $result = mysqli_query($mysqli, $q);
     $row = mysqli_fetch_assoc($result);
@@ -220,15 +245,19 @@ function getMap($stream, $substream, $ts1, $ts2) {
               <h6>Statistics</h6>
               <div class="row">
                 <div class="col-4 text-center">
-                  <h6 class="text-dark font-weight-bold mb-0">Total</h6>
-                  <p>{{ total }}</p>
+                  <h6 class="text-dark font-weight-bold mb-0">Success</h6>
+                  <p>{{ success }}</p>
+                </div>
+                <div class="col-4 text-center">
+                  <h6 class="text-dark font-weight-bold mb-0">Decline</h6>
+                  <p>{{ decline }}</p>
                 </div>
               </div>
               <h6>Week</h6>
               <template v-if="week.length > 0">
                 <div class="row" v-for="day in week">
                   <div class="col-8 text-secondary font-weight-bold text-xs mt-1">
-                    {{ formatDay(day["ts"]) }}:
+                    {{ day["day"] }}:
                   </div>
                   <div class="col-4">
                     <b>{{ day["cnt"] }}</b>
@@ -267,7 +296,15 @@ function getMap($stream, $substream, $ts1, $ts2) {
     </div>
   </main>
 
+  <div class="preloader">
+    <img src="./preloader.svg" />
+  </div>
+
   <style>
+    body {
+      overflow: hidden;
+    }
+
     .flag-wrapper {
       display: inline-block;
       width: 55px;
@@ -279,6 +316,23 @@ function getMap($stream, $substream, $ts1, $ts2) {
     table.dataTable {
       width: 100% !important;
     }
+
+    .preloader {
+      width: 100%;
+      height: 100%;
+      background: #fff;
+      position: fixed;
+      top: 0;
+      left: 0;
+
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .preloader img {
+      height: 96px;
+    }
   </style>
 
   <script>
@@ -289,7 +343,8 @@ function getMap($stream, $substream, $ts1, $ts2) {
         date_start: "",
         date_end: "",
         hash: "",
-        total: 0,
+        success: 0,
+        decline: 0,
         week: [],
       },
       mounted: function () {
@@ -323,6 +378,18 @@ function getMap($stream, $substream, $ts1, $ts2) {
               visible: false
             },
             {
+              title: "Type",
+              data: "type",
+              render: function( data, type, row, meta ) {
+                if (row.reason != "") return `${row.type} / ${row.reason}`;
+                else return data;
+              }
+            },
+            {
+              data: "reason",
+              visible: false,
+            },
+            {
               title: "Date",
               data: "timestamp",
               render: function ( data, type, row, meta ) {
@@ -330,7 +397,7 @@ function getMap($stream, $substream, $ts1, $ts2) {
               }
             },
           ],
-          order: [[2, "desc"]],
+          order: [[4, "desc"]],
         });
 
         this.reload();
@@ -352,7 +419,8 @@ function getMap($stream, $substream, $ts1, $ts2) {
           .done(function(data) {
             let decoded = JSON.parse(data);
             self.stream = decoded.stream;
-            self.total = decoded.total;
+            self.success = decoded.success;
+            self.decline = decoded.decline;
             self.week = decoded.week;
         
             $("#map").vectorMap({
@@ -364,17 +432,10 @@ function getMap($stream, $substream, $ts1, $ts2) {
               },
               hoverOpacity: 0.7, hoverColor: false,
             });
+
+            $("body").css("overflow", "auto");
+            $(".preloader").hide();
           })
-        },
-        formatDay: function(ts) {
-          let date = new Date(+ts * 1000);
-
-          var day = date.getDate() < 10 ? "0" + date.getDate() : date.getDate();
-          var month = date.getMonth() + 1 < 10 ? "0" + (+date.getMonth() + 1) : +date.getMonth() + 1;
-          var year = date.getFullYear();
-          var weekday = date.toLocaleDateString("en-US", { weekday: 'long' });
-
-          return month + "/" + day + "/" + year + " (" + weekday + ")";
         },
         formatDate: function(ts) {
           let date = new Date(+ts * 1000);

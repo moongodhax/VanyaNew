@@ -1,12 +1,10 @@
 <?php
-if (filter_var($client, FILTER_VALIDATE_IP)) $ip = @$_SERVER['HTTP_CLIENT_IP'];
-elseif (filter_var($forward, FILTER_VALIDATE_IP)) $ip = @$_SERVER['HTTP_X_FORWARDED_FOR'];
-else $ip = @$_SERVER['REMOTE_ADDR'];
+$ip = getIP();
 
-if ($ip != '109.234.35.187' || $ip != '212.192.246.217'){
-  header("HTTP/1.0 404 Not Found");
-  die();
-}
+// if ($ip != '109.234.35.187' && $ip != '212.192.246.217' && $ip != '185.197.75.169'){
+//   header("HTTP/1.0 404 Not Found");
+//   die();
+// }
 
 require_once("./php/mysqli.php");
 
@@ -45,9 +43,10 @@ if ($action == "show") {
       ]
     ]);
   }
-  else echo countSteam($stream);
+  else echo countStream($stream);
 } else if ($action == "delete") {
-  clearCurrent($stream);
+  if ($stream == "distributor") clearDistributor();
+  else clearCurrent($stream);
   if (mysqli_error($mysqli) == "") echo "1";
   else echo "0";
 }
@@ -65,14 +64,15 @@ function getStreams() {
   return $streams;
 }
 
-function countSteam($stream) {
+function countStream($stream) {
   global $mysqli;
 
-  $result = mysqli_query($mysqli, "SELECT `value` AS val FROM `settings` WHERE `name` = 'current_$stream'");
+  $result = mysqli_query($mysqli, "SELECT `id`, `current_ts` FROM `streams` WHERE `name` = '$stream'");
   $row = mysqli_fetch_assoc($result);
-  $current_ts = $row['val'];
+  $current_ts = $row['current_ts'];
+  $id = $row['id'];
 
-  $result = mysqli_query($mysqli, "SELECT COUNT(*) AS cnt FROM `records` WHERE `timestamp` > $current_ts AND `stream` = '$stream'");
+  $result = mysqli_query($mysqli, "SELECT COUNT(*) AS cnt FROM `records` WHERE `timestamp` > $current_ts AND `streamid` = '$id' AND `type` = 'ok'");
   $row = mysqli_fetch_assoc($result);
   return $row['cnt'];
 }
@@ -80,17 +80,29 @@ function countSteam($stream) {
 function countDistributor() {
   global $mysqli;
 
+  $mixone = 0;
+  $mixtwo = 0;
+  $eu = 0;
+  $us = 0;
+  $result = mysqli_query($mysqli, "SELECT * FROM `streams`");
+  while($row = mysqli_fetch_assoc($result)) {
+    if ($row['name'] == "mixone") $mixone = $row['id'];
+    if ($row['name'] == "mixtwo") $mixtwo = $row['id'];
+    if ($row['name'] == "eu") $eu = $row['id'];
+    if ($row['name'] == "us") $us = $row['id'];
+  }
+
   $result = mysqli_query($mysqli, "SELECT `value` AS val FROM `settings` WHERE `name` = 'current_distributor'");
   $row = mysqli_fetch_assoc($result);
   $current_ts = $row['val'];
 
   $q = "SELECT
-    COUNT(CASE WHEN `timestamp` >= {$current_ts} AND (`stream` = 'mixone' OR `stream` = 'mixtwo') AND `distributor` = 'single' THEN 1 END) AS ws,
-    COUNT(CASE WHEN `timestamp` >= {$current_ts} AND (`stream` = 'mixone' OR `stream` = 'mixtwo') AND `distributor` = 'double' THEN 1 END) AS wd,
-    COUNT(CASE WHEN `timestamp` >= {$current_ts} AND `stream` = 'eu' AND `distributor` = 'single' THEN 1 END) AS es,
-    COUNT(CASE WHEN `timestamp` >= {$current_ts} AND `stream` = 'eu' AND `distributor` = 'double' THEN 1 END) AS ed,
-    COUNT(CASE WHEN `timestamp` >= {$current_ts} AND `stream` = 'us' AND `distributor` = 'single' THEN 1 END) AS us,
-    COUNT(CASE WHEN `timestamp` >= {$current_ts} AND `stream` = 'us' AND `distributor` = 'double' THEN 1 END) AS ud
+    COUNT(CASE WHEN `timestamp` >= {$current_ts} AND (`streamid` = $mixone OR `streamid` = $mixtwo) AND `distributor` = 'single' THEN 1 END) AS ws,
+    COUNT(CASE WHEN `timestamp` >= {$current_ts} AND (`streamid` = $mixone OR `streamid` = $mixtwo) AND `distributor` = 'double' THEN 1 END) AS wd,
+    COUNT(CASE WHEN `timestamp` >= {$current_ts} AND `streamid` = $eu AND `distributor` = 'single' THEN 1 END) AS es,
+    COUNT(CASE WHEN `timestamp` >= {$current_ts} AND `streamid` = $eu AND `distributor` = 'double' THEN 1 END) AS ed,
+    COUNT(CASE WHEN `timestamp` >= {$current_ts} AND `streamid` = $us AND `distributor` = 'single' THEN 1 END) AS us,
+    COUNT(CASE WHEN `timestamp` >= {$current_ts} AND `streamid` = $us AND `distributor` = 'double' THEN 1 END) AS ud
   FROM `records`;";
   
   $result = mysqli_query($mysqli, $q);
@@ -111,10 +123,43 @@ function countDistributor() {
 function clearCurrent($stream) {
   global $mysqli;
 
+  $stream = mysqli_real_escape_string($mysqli, $stream);
   $time = time();
 
-  mysqli_query($mysqli, "UPDATE `settings` SET `value` = '$time' WHERE `name` = 'current_$stream'");
-  mysqli_query($mysqli, "INSERT INTO `current` (`stream`, `time`) VALUES ('$stream', $time)");
+  $result = mysqli_query($mysqli, "SELECT `id` FROM `streams` WHERE `name` = '$stream'");
+  $row = mysqli_fetch_assoc($result);
+  $streamid = $row['id'];
+
+  mysqli_query($mysqli, "UPDATE `streams` SET `current_ts` = '$time' WHERE `name` = '$stream'");
+  mysqli_query($mysqli, "INSERT INTO `current` (`streamid`, `time`) VALUES ('$streamid', $time)");
+}
+
+function clearDistributor() {
+  global $mysqli;
+
+  $time = time();
+
+  mysqli_query($mysqli, "UPDATE `settings` SET `value` = '$time' WHERE `name` = 'current_distributor'");
+}
+
+function getIP() {
+  if ((!empty($_SERVER['GEOIP_ADDR'])) && (($_SERVER['GEOIP_ADDR']) <> '127.0.0.1'))
+      $ip = $_SERVER['GEOIP_ADDR'];
+  
+  else if ((!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) && (($_SERVER['HTTP_X_FORWARDED_FOR']) <> '127.0.0.1') && (($_SERVER['HTTP_X_FORWARDED_FOR']) <> ($_SERVER['SERVER_ADDR'])))
+      $ip = explode(',',$_SERVER['HTTP_X_FORWARDED_FOR'])[0];
+  
+  else if ((!empty($_SERVER['HTTP_CLIENT_IP'])) && (($_SERVER['HTTP_CLIENT_IP']) <> '127.0.0.1') && (($_SERVER['HTTP_CLIENT_IP']) <> ($_SERVER['SERVER_ADDR'])))
+      $ip = $_SERVER['HTTP_CLIENT_IP'];
+  
+  else if ((!empty($_SERVER['HTTP_X_REAL_IP'])) && (($_SERVER['HTTP_X_REAL_IP']) <> '127.0.0.1') && (($_SERVER['HTTP_X_REAL_IP']) <> ($_SERVER['SERVER_ADDR'])))
+      $ip = $_SERVER['HTTP_X_REAL_IP'];
+  
+  else $ip = $_SERVER['REMOTE_ADDR'];
+  
+  if ($ip == 'unknown') $ip = $_SERVER['REMOTE_ADDR'];
+
+  return $ip; 
 }
 
 ?>

@@ -44,6 +44,18 @@ $(document).ready(function () {
           visible: false,
         },
         {
+          title: "Тип",
+          data: "type",
+          render: function( data, type, row, meta ) {
+            if (row.reason != "") return `${row.type} / ${row.reason}`;
+            else return data;
+          }
+        },
+        {
+          data: "reason",
+          visible: false,
+        },
+        {
           title: "IP",
           data: "ip",
           render: function ( data, type, row, meta ) {
@@ -84,6 +96,6 @@ $(document).ready(function () {
           }
         },
       ],
-      order: [[6, "desc"]],
+      order: [[8, "desc"]],
     });
 });

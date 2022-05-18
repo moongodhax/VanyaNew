@@ -6,8 +6,8 @@ if (!isset($_GET["hash"])) {
 
 require_once(__DIR__ . "/../php/mysqli.php");
 
-$stream = null;
-$substream = null;
+$streamid = null;
+$substreamid = null;
 
 $hash = mysqli_real_escape_string($mysqli, $_GET['hash']);
 
@@ -17,11 +17,8 @@ $row = mysqli_fetch_assoc($result);
 if ($row['cnt'] > 0) {
   $result = mysqli_query($mysqli, "SELECT * FROM `substreams` WHERE `hash` = '$hash'");
   $row = mysqli_fetch_assoc($result);
-  $substream = $row["name"];
-
-  $result = mysqli_query($mysqli, "SELECT * FROM `streams` WHERE `id` = " . $row["streamid"]);
-  $row = mysqli_fetch_assoc($result);
-  $stream = $row["name"];
+  $substreamid = $row["id"];
+  $streamid = $row["streamid"];
 } else {
   header("HTTP/1.0 404 Not Found");
   die();
@@ -29,7 +26,7 @@ if ($row['cnt'] > 0) {
 
 
 /* DB table to use */
-$sTable = "records";
+$sTable = "`records`";
 
 $draw = $_POST["draw"];
 $pColumns = $_POST["columns"];
@@ -79,7 +76,7 @@ if ($_POST["search"]["value"] != "") {
     for ($i = 0; $i < count($pColumns); $i++) {
       if ($pColumns[$i]["data"] != "") {
         $sWhere .=
-            $pColumns[$i]["data"] . " LIKE '%" .
+            $sTable . ".`" . $pColumns[$i]["data"] . "` LIKE '%" .
             mysqli_real_escape_string($mysqli, $pSearch["value"]) . "%' OR ";
       }
     }
@@ -96,15 +93,15 @@ for ($i = 0; $i < count($pColumns); $i++) {
             $sWhere .= " AND ";
         }
         $sWhere .=
-            $pColumns[$i]["data"] . " LIKE '%" . 
+            $sTable . ".`" . $pColumns[$i]["data"] . "` LIKE '%" . 
             mysqli_real_escape_string($mysqli, $pColumns[$i]["search"]["value"]) . "%' ";
     }
 }
 
 if ($sWhere == "") $sWhere = "WHERE ";
 else $sWhere .= " AND ";
-$sWhere .= " stream = '" . mysqli_real_escape_string($mysqli, $stream) . "'";
-$sWhere .= "AND substream = '" . mysqli_real_escape_string($mysqli, $substream) . "'";
+$sWhere .= $sTable . ".`streamid` = '" . mysqli_real_escape_string($mysqli, $streamid) . "'";
+$sWhere .= "AND $sTable.`substreamid` = '" . mysqli_real_escape_string($mysqli, $substreamid) . "'";
 
 /* date */
 if (isset($_POST["date_start"]) && $_POST["date_start"] != "" && isset($_POST["date_end"]) && $_POST["date_end"] != "") {
@@ -145,15 +142,20 @@ $sQuery = "SELECT COUNT(*) AS cnt FROM $sTable $sWhere";
 $row = mysqli_fetch_assoc($result);
 $out["recordsFiltered"] = $row['cnt'];
 
+/* join */
+$sJoin = "
+LEFT JOIN `streams` ON `records`.`streamid` = `streams`.`id`
+LEFT JOIN `substreams` ON `records`.`substreamid` = `substreams`.`id`
+";
 
 /* get data */
 
-$columnsArr = ["id"];
+$columnsArr = ["`records`.`id`", "`streams`.`name` as 'stream'", "`substreams`.`name` as 'substream'"];
 foreach($pColumns as $c) {
   if ($c["data"] != "") $columnsArr[] = $c["data"];
 }
 
-$sQuery = "SELECT " . implode(", ", $columnsArr) . " FROM $sTable $sWhere $sOrder $sLimit";
+$sQuery = "SELECT " . implode(", ", $columnsArr) . " FROM $sTable $sJoin $sWhere $sOrder $sLimit";
 ($result = mysqli_query($mysqli, $sQuery)) or die(mysqli_error($mysqli));
 
 while ($row = mysqli_fetch_assoc($result)) {

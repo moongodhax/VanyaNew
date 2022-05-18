@@ -18,6 +18,10 @@ if ($path != "/auth") {
   }
 }
 
+$color_settings["dark_version"] = getSetting("dark_version");
+$color_settings["menu_color"] = getSetting("menu_color");
+$color_settings["active_color"] = getSetting("active_color");
+
 switch ($path){
   case "/auth": 
     if (isset($_SESSION["logined"]) && $_SESSION["logined"] == true) {

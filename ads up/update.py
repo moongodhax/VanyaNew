@@ -22,6 +22,9 @@ from datetime import datetime
 import traceback
 import time
 
+headers = {
+  "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.88 Safari/537.36"
+}
 
 while True:
   try:
@@ -37,7 +40,7 @@ while True:
     for key in links:
       if (links[key] != "0"):
         try:
-          resp = requests.get(links[key])
+          resp = requests.get(links[key], headers = headers)
         except:
           out += f"{key} -> {links[key]} download error =========================\n"
           tr = traceback.format_exc()

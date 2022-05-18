@@ -14,10 +14,20 @@ switch ($path) {
   break;
 
   case "/api/getStreamStats":
-    $map = getMap($_GET["stream"], (isset($_GET["substream"]) ? $_GET["substream"] : ""));
+    $map = getMap($_GET["streamid"], $_GET["substreamid"]);
     $countries = getCountries($map);
-    $chart = getDayChartMonth($_GET["stream"], (isset($_GET["substream"]) ? $_GET["substream"] : ""));
+    $chart = getDayChartMonth($_GET["streamid"], (isset($_GET["substreamid"]) ? $_GET["substreamid"] : ""));
     echo json_encode(["map" => $map, "countries" => $countries, "chart" => $chart]);
+  break;
+
+  case "/api/setStreamColor":
+    setStreamColor($_GET["stream"], $_GET["color"]);
+    echo json_encode(["success" => true]);
+  break;
+
+  case "/api/clearSubstream":
+    clearSubstream($_GET["substream"]);
+    echo json_encode(["success" => true]);
   break;
 
   /*
@@ -25,12 +35,8 @@ switch ($path) {
    */
   
   case "/api/getCurrentDates":
-    if (!isset($_GET["stream"]) || $_GET["stream"] == "") die("[]");
-    echo json_encode(getCurrentDates($_GET["stream"]));
-  break;
-  
-  case "/api/clearCurrent":
-    clearCurrent($_GET["stream"]);
+    if (!isset($_GET["streamid"]) || $_GET["streamid"] == "") die("[]");
+    echo json_encode(getCurrentDates($_GET["streamid"]));
   break;
 
   /*
@@ -92,6 +98,15 @@ switch ($path) {
     removeStreams($_POST["ids"]);
     echo json_encode(["success" => true]);
   break;
+  case "/api/renameStream":
+    $res = preg_match("/^[A-Za-z_]*$/", $_POST["newName"], $matches);
+    if ($res === 1) {
+      renameStream($_POST["oldName"], $_POST["newName"]);
+      echo json_encode(["success" => true]);
+    } else {
+      echo json_encode(["success" => false, "error" => "Имя не должно содержать спецсимволы"]);
+    }
+  break;
 
   case "/api/addSubstream":
     $res = preg_match("/^[A-Za-z_]*$/", $_POST["name"], $matches);
@@ -108,6 +123,15 @@ switch ($path) {
   case "/api/removeSubstreams":
     removeSubstreams($_POST["ids"]);
     echo json_encode(["success" => true]);
+  break;
+  case "/api/renameSubstream":
+    $res = preg_match("/^[A-Za-z_]*$/", $_POST["newName"], $matches);
+    if ($res === 1) {
+      renameSubstream($_POST["oldName"], $_POST["newName"]);
+      echo json_encode(["success" => true]);
+    } else {
+      echo json_encode(["success" => false, "error" => "Имя не должно содержать спецсимволы"]);
+    }
   break;
 
   case "/api/addParam":
@@ -136,6 +160,25 @@ switch ($path) {
   break;
   case "/api/banCountries":
     setSetting("banned_countries", $_GET["countries"]);
+    echo json_encode(["success" => true]);
+  break;
+
+  case "/api/setDark": 
+    setSetting("dark_version", $_GET["dark"]);
+  break;
+  case "/api/setSidebar": 
+    setSetting("menu_color", $_GET["color"]);
+  break;
+  case "/api/setNavbar": 
+    setSetting("active_color", $_GET["color"]);
+  break;
+
+  case "/api/updateStreamsOrder": 
+    updateStreamsOrder($_POST["streams"]);
+    echo json_encode(["success" => true]);
+  break;
+  case "/api/updateSubstreamsOrder": 
+    updateSubstreamsOrder($_POST["substreams"]);
     echo json_encode(["success" => true]);
   break;
 }

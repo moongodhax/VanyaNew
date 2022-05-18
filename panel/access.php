@@ -2,54 +2,40 @@
 require_once("./geoip/geoip.php");
 require_once("./php/mysqli.php");
 
-// проверка IP на блеклист
 $ip = getIP();
-if (checkBlacklist($mysqli, $ip)) {
-  writeRecord($mysqli, "blacklist", '', $_SERVER['HTTP_USER_AGENT'], '', $ip, '', getCountryCode($ip), time());
-  die("0");
-}
-
-// проверка за забаненность страны
-$country = getCountryCode($ip);
-$banned = getBannedCountries($mysqli);
-
-if (array_search($country, $banned) !== false) {
-  writeRecord($mysqli, "banned", '', $_SERVER['HTTP_USER_AGENT'], '', $ip, '', getCountryCode($ip), time());
-  die("0");
-}
-
-// проверка юзер-агента
-if ($_SERVER['HTTP_USER_AGENT'] != "1") {
-  writeRecord($mysqli, "decline", '', $_SERVER['HTTP_USER_AGENT'], '', $ip, '', getCountryCode($ip), time());
-  header("HTTP/1.0 404 Not Found");
-  die();
-}
 
 // проверка потока и подпотока
-if (!isset($_GET["stream"])) die("0");
+if (!isset($_GET["stream"])) {
+  writeRecord($mysqli, '', 0, '', 0, "decline", 'No stream', $_SERVER['HTTP_USER_AGENT'], '', $ip, '', getCountryCode($ip), time());
+  die("0");
+}
 
 $stream = "";
-$substream = "";
+$streamid = "";
+$substreamid = "";
 if ($_GET["stream"] == "mix" && $_GET["substream"] == "mixtwo") {
-  $stream = "mixone";
-  $substream = "mixtwo";
+  $_GET["stream"] = "mixone";
+} else if ($_GET["stream"] == "r" || $_GET["stream"] == "n") {
+  writeRecord($mysqli, 0, 0, "decline", 'R or N', $_SERVER['HTTP_USER_AGENT'], '', $ip, '', getCountryCode($ip), time());
+  die("0");
 } else {
   $streams = getStreams($mysqli);
   foreach ($streams as $s) {
     if ($s["stream"] == $_GET["stream"]) {
-      $stream = $_GET["stream"];
+      $stream = $s["stream"];
+      $streamid = $s["id"];
 
       if (isset($_GET["substream"])) {
         $search = false;
         foreach ($s["substreams"] as $ss) {
           if ($ss['name'] == $_GET["substream"]) {
-            $substream = $_GET["substream"];
+            $substreamid = $ss['id'];
             $search = true;
             break;
           }
         }
         if (!$search) {
-          writeRecord($mysqli, "decline", '', $_SERVER['HTTP_USER_AGENT'], '', $ip, '', getCountryCode($ip), time());
+          writeRecord($mysqli, $streamid, 0, "decline", 'Incorrect substream', $_SERVER['HTTP_USER_AGENT'], '', $ip, '', getCountryCode($ip), time());
           die("0");
         }
       }
@@ -60,19 +46,41 @@ if ($_GET["stream"] == "mix" && $_GET["substream"] == "mixtwo") {
 }
 
 if ($stream == "") {
-  writeRecord($mysqli, "decline", '', $_SERVER['HTTP_USER_AGENT'], '', $ip, '', getCountryCode($ip), time());
+  writeRecord($mysqli, '', 0, '', 0, "decline", 'Empty stream', $_SERVER['HTTP_USER_AGENT'], '', $ip, '', getCountryCode($ip), time());
   die("0");
+}
+
+// проверка IP на блеклист
+if (checkBlacklist($mysqli, $ip)) {
+  writeRecord($mysqli, $streamid, $substreamid, "blacklist", 'Blacklist', $_SERVER['HTTP_USER_AGENT'], '', $ip, '', getCountryCode($ip), time());
+  die("0");
+}
+
+// проверка за забаненность страны
+$country = getCountryCode($ip);
+$banned = getBannedCountries($mysqli);
+
+if (array_search($country, $banned) !== false) {
+  writeRecord($mysqli, $streamid, $substreamid, "banned", 'Banned country', $_SERVER['HTTP_USER_AGENT'], '', $ip, '', getCountryCode($ip), time());
+  die("0");
+}
+
+// проверка юзер-агента
+if ($_SERVER['HTTP_USER_AGENT'] != "1") {
+  writeRecord($mysqli, $streamid, $substreamid, "decline", 'Incorrect user-agent', $_SERVER['HTTP_USER_AGENT'], '', $ip, '', getCountryCode($ip), time());
+  header("HTTP/1.0 404 Not Found");
+  die();
 }
 
 // проверка айпи на повторы
 if (!checkIP($mysqli, $ip)) {
-  writeRecord($mysqli, "decline", '', $_SERVER['HTTP_USER_AGENT'], '', $ip, '', getCountryCode($ip), time());
+  writeRecord($mysqli, $streamid, $substreamid, "decline", 'Duplicate', $_SERVER['HTTP_USER_AGENT'], '', $ip, '', getCountryCode($ip), time());
   die("0");
 }
 
 $sub = $_GET["sub"];
 
-writeRecord($mysqli, $stream, $substream, $_SERVER['HTTP_USER_AGENT'], $sub, $ip, getDistributor(strtoupper($stream)), getCountryCode($ip), time());
+writeRecord($mysqli, $streamid, $substreamid, "ok", "", $_SERVER['HTTP_USER_AGENT'], $sub, $ip, getDistributor(strtoupper($stream)), getCountryCode($ip), time());
 
 echo "1";
 
@@ -110,19 +118,6 @@ function getStreams($mysqli) {
   return $streams;
 }
 
-function getPayloads($mysqli) {
-  $payloads = [];
-  $result = mysqli_query($mysqli, "SELECT * FROM `payloads`");
-  while($row = mysqli_fetch_assoc($result)) {
-    $payloads[] = [
-      "id" => $row['id'],
-      "name" => $row['name']
-    ];
-  }
-
-  return $payloads;
-}
-
 function getDistributor($stream) {
   $ch = curl_init();
 
@@ -145,13 +140,13 @@ function getDistributor($stream) {
 function getCountryCode($ip) {
   $countryCode = "";
   
-  try {
-      $data = json_decode(file_get_contents('http://ip-api.com/json/' . $ip), true);
-      if ($data["status"] == "success") $countryCode = $data["countryCode"];
-      else $countryCode = ip_code($ip);
-  } catch (Exception $e) {
+  // try {
+      // $data = json_decode(file_get_contents('http://ip-api.com/json/' . $ip), true);
+      // if ($data["status"] == "success") $countryCode = $data["countryCode"];
+      // else $countryCode = ip_code($ip);
+  // } catch (Exception $e) {
       $countryCode = ip_code($ip);
-  }
+  // }
   
   return $countryCode;
 }
@@ -177,7 +172,7 @@ function getIP() {
 }
 
 function checkIP($mysqli, $ip) {
-  $result = mysqli_query($mysqli, "SELECT COUNT(*) AS cnt FROM `records` WHERE `ip` = '$ip' AND `stream` != 'blacklist'");
+  $result = mysqli_query($mysqli, "SELECT COUNT(*) AS cnt FROM `records` WHERE `ip` = '$ip' AND `type` != 'blacklist'");
   $row = mysqli_fetch_assoc($result);
   if ($row['cnt'] > 0) {
     return false;
@@ -194,8 +189,9 @@ function checkBlacklist($mysqli, $ip) {
   return ($row['cnt'] != 0);
 }
 
-function writeRecord($mysqli, $stream, $substream, $ua, $sub,  $ip,$distributor, $country, $timestamp) {
-  $q = "INSERT INTO `records` (`stream`, `substream`, `ua`, `sub`, `ip`, `distributor`, `country`, `timestamp`) VALUES ('$stream', '$substream', '$ua', '$sub', '$ip', '$distributor', '$country', $timestamp)";
+function writeRecord($mysqli, $streamid, $substreamid, $type, $reason, $ua, $sub,  $ip,$distributor, $country, $timestamp) {
+  $q = "INSERT INTO `records` (`streamid`, `substreamid`, `type`, `reason`, `ua`, `sub`, `ip`, `distributor`, `country`, `timestamp`) VALUES 
+  ($streamid, $substreamid, '$type', '$reason', '$ua', '$sub', '$ip', '$distributor', '$country', $timestamp)";
   mysqli_query($mysqli, $q);
 }
 

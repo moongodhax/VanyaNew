@@ -1,12 +1,10 @@
 <?php
-date_default_timezone_set("Europe/Moscow");
-
 $ip = getIP();
 
-if ($ip != '109.234.35.187' && $ip != '212.192.246.217'){
-  header("HTTP/1.0 404 Not Found");
-  die();
-}
+// if ($ip != '109.234.35.187' && $ip != '212.192.246.217' && $ip != '185.197.75.169'){ 
+//   header("HTTP/1.0 404 Not Found");
+//   die();
+// }
 
 $stream = $_GET["stream"];
 $action = $_GET["action"];

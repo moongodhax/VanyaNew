@@ -35,8 +35,11 @@ function addStream($name) {
   $row = mysqli_fetch_assoc($result);
   if ($row['cnt'] > 0) return false;
 
-  mysqli_query($mysqli, "INSERT INTO `streams` (`name`) VALUES ('$name')");
-  mysqli_query($mysqli, "INSERT INTO `settings` (`name`, `value`) VALUES ('current_$name', 0)");
+  $result = mysqli_query($mysqli, "SELECT MAX(`position`) AS pos FROM `streams`");
+  $row = mysqli_fetch_assoc($result);
+  $position = $row['position'] + 1;
+
+  mysqli_query($mysqli, "INSERT INTO `streams` (`name`, `current_ts`, `color`, `position`) VALUES ('$name', 0, 'D81B60', $position)");
   return true;
 }
 
@@ -48,16 +51,17 @@ function addSubstream($streamid, $name) {
   $name = mysqli_real_escape_string($mysqli, $name);
   $name = strtolower($name);
 
-  $streamid = mysqli_real_escape_string($mysqli, $streamid);
-  $name = mysqli_real_escape_string($mysqli, $name);
-
   $result = mysqli_query($mysqli, "SELECT COUNT(*) AS cnt FROM `substreams` WHERE `streamid` = $streamid AND `name` = '$name'");
   $row = mysqli_fetch_assoc($result);
   if ($row['cnt'] > 0) return false;
 
   $hash = md5($name . $SALT);
 
-  mysqli_query($mysqli, "INSERT INTO `substreams` (`streamid`, `name`, `hash`) VALUES ($streamid, '$name', '$hash')");
+  $result = mysqli_query($mysqli, "SELECT MAX(`position`) AS pos FROM `substreams` WHERE `streamid` = $streamid");
+  $row = mysqli_fetch_assoc($result);
+  $position = $row['position'] + 1;
+
+  mysqli_query($mysqli, "INSERT INTO `substreams` (`streamid`, `name`, `hash`, `position`) VALUES ($streamid, '$name', '$hash', $position)");
   return true;
 }
 
@@ -70,6 +74,9 @@ function getStreams() {
     $streams[$row['id']] = [
       "id" => $row['id'],
       "stream" => $row['name'],
+      "current_ts" => $row['current_ts'],
+      "color" => $row['color'],
+      "position" => $row['position'],
       "substreams" => []
     ];
   }
@@ -80,6 +87,7 @@ function getStreams() {
       "id" => $row['id'],
       "name" => $row['name'],
       "hash" => $row['hash'],
+      "position" => $row['position'],
     ];
   }
 
@@ -103,6 +111,54 @@ function removeSubstreams($substream_ids) {
   $substream_ids = mysqli_real_escape_string($mysqli, $substream_ids);
 
   mysqli_query($mysqli, "DELETE FROM `substreams` WHERE `id` IN ($substream_ids)");
+}
+
+function setStreamColor($stream, $color) {
+  global $mysqli;
+  $stream = mysqli_real_escape_string($mysqli, $stream);
+  $color = mysqli_real_escape_string($mysqli, $color);
+  mysqli_query($mysqli, "UPDATE `streams` SET `color` = '$color' WHERE `name` = '$stream'");
+}
+
+function renameStream($oldName, $newName) {
+  global $mysqli;
+  $newName = mysqli_real_escape_string($mysqli, $newName);
+  $oldName = mysqli_real_escape_string($mysqli, $oldName);
+  mysqli_query($mysqli, "UPDATE `streams` SET `name` = '$newName' WHERE `name` = '$oldName'");
+}
+
+function renameSubstream($oldName, $newName) {
+  global $mysqli;
+  $oldName = mysqli_real_escape_string($mysqli, $oldName);
+  $newName = mysqli_real_escape_string($mysqli, $newName);
+  mysqli_query($mysqli, "UPDATE `substreams` SET `name` = '$newName' WHERE `name` = '$oldName'");
+}
+
+function updateStreamsOrder($streams) {
+  global $mysqli;
+
+  $counter = 0;
+  foreach ($streams as $s) {
+    mysqli_query($mysqli, "UPDATE `streams` SET `position` = $counter WHERE `id` = " . mysqli_real_escape_string($mysqli, $s));
+    $counter++;
+  }
+}
+
+function updateSubstreamsOrder($substreams) {
+  global $mysqli;
+
+  $counter = 0;
+  foreach ($substreams as $s) {
+    mysqli_query($mysqli, "UPDATE `substreams` SET `position` = $counter WHERE `id` = " . mysqli_real_escape_string($mysqli, $s));
+    $counter++;
+  }
+}
+
+function clearSubstream($substream) {
+  global $mysqli;
+  $substream = mysqli_real_escape_string($mysqli, $substream);
+
+  mysqli_query($mysqli, "DELETE FROM `records` WHERE `substream` = '$substream'");
 }
 
 ?>

@@ -17,8 +17,6 @@ var app = new Vue({
     countriesSelect: null,
   },
   mounted: function () {
-    let self = this;
-
     let tmp_select = $('#countries-select').selectize();
     this.countriesSelect = tmp_select[0].selectize;
 
@@ -57,10 +55,72 @@ var app = new Vue({
         for(stream of response.data) {
           self.streams.push(stream);
         }
+
+        function compare(a, b) {
+          if (a.position < b.position)
+            return -1;
+          if (a.position > b.position)
+            return 1;
+          return 0;
+        }
+        
+        self.streams.sort(compare);
+
+        for (let i = 0; i < self.streams.length; i++) {
+          self.streams[i].substreams.sort(compare);
+        }
+
+        $("#streams").sortable({
+          update: self.saveStreamsOrder
+        });
+
+        self.$nextTick(function () {
+          $("#substreams").sortable({
+            update: self.saveSubstreamsOrder
+          });
+        });
       })
       .catch(function (error) {
         Toastify({ text: "Произошла ошибка во время получения потоков", className: "bg-gradient-danger border-radius-lg" }).showToast();
       });
+    },
+    saveStreamsOrder: function() {
+      let streams = $('#streams').sortable("toArray");
+      for (let i = 0; i < streams.length; i++) {
+        streams[i] = streams[i].replace("stream-", "");
+      }
+      
+      $.post("/api/updateStreamsOrder", { streams: streams })
+      .done(function(data) {
+        data = JSON.parse(data);
+        if (data.success == true) {
+          Toastify({ text: "Порядок сохранен", className: "bg-gradient-success border-radius-lg" }).showToast();
+        } else {
+          Toastify({ text: data.error, className: "bg-gradient-danger border-radius-lg" }).showToast();
+        }
+      })
+      .fail(function() {
+        Toastify({ text: "Произошла ошибка", className: "bg-gradient-danger border-radius-lg" }).showToast();
+      })
+    },
+    saveSubstreamsOrder: function() {
+      let substreams = $('#substreams').sortable("toArray");
+      for (let i = 0; i < substreams.length; i++) {
+        substreams[i] = substreams[i].replace("substream-", "");
+      }
+      
+      $.post("/api/updateSubstreamsOrder", { substreams: substreams })
+      .done(function(data) {
+        data = JSON.parse(data);
+        if (data.success == true) {
+          Toastify({ text: "Порядок сохранен", className: "bg-gradient-success border-radius-lg" }).showToast();
+        } else {
+          Toastify({ text: data.error, className: "bg-gradient-danger border-radius-lg" }).showToast();
+        }
+      })
+      .fail(function() {
+        Toastify({ text: "Произошла ошибка", className: "bg-gradient-danger border-radius-lg" }).showToast();
+      })
     },
     updateParams: function() {
       let self = this;
@@ -341,6 +401,73 @@ var app = new Vue({
           Toastify({ text: "Произошла ошибка", className: "bg-gradient-danger border-radius-lg" }).showToast();
         });
       }
+    },
+    renameStream(stream) {
+      let name = prompt("Введите новое имя");
+      let check = /^[A-Za-z_]*$/.test(name);
+      if (name.length > 0 && check == true) {
+        let self = this;
+        let fd = new FormData();
+  
+        fd.append("oldName", stream);
+        fd.append("newName", name);
+  
+        axios({
+          method: "post",
+          url: '/api/renameStream',
+          data: fd
+        })
+        .then(function (response) {
+          if (response.data.success == true) {
+            Toastify({ text: "Успешно переименовано", className: "bg-gradient-success border-radius-lg" }).showToast();
+            self.updateStreams();
+          } else {
+            Toastify({ text: response.data.error, className: "bg-gradient-danger border-radius-lg" }).showToast();
+          }
+        })
+        .catch(function (error) {
+          Toastify({ text: "Произошла ошибка", className: "bg-gradient-danger border-radius-lg" }).showToast();
+        });
+      } else {
+        Toastify({ text: "Ошибка в имени", className: "bg-gradient-danger border-radius-lg" }).showToast();
+      }
+    },
+    renameSubstream(substream) {
+      let name = prompt("Введите новое имя");
+      let check = /^[A-Za-z_]*$/.test(name);
+      if (name.length > 0 && check == true) {
+        let self = this;
+        let fd = new FormData();
+  
+        fd.append("oldName", substream);
+        fd.append("newName", name);
+  
+        axios({
+          method: "post",
+          url: '/api/renameSubstream',
+          data: fd
+        })
+        .then(function (response) {
+          if (response.data.success == true) {
+            Toastify({ text: "Успешно переименовано", className: "bg-gradient-success border-radius-lg" }).showToast();
+            self.updateStreams();
+          } else {
+            Toastify({ text: response.data.error, className: "bg-gradient-danger border-radius-lg" }).showToast();
+          }
+        })
+        .catch(function (error) {
+          Toastify({ text: "Произошла ошибка", className: "bg-gradient-danger border-radius-lg" }).showToast();
+        });
+      } else {
+        Toastify({ text: "Ошибка в имени", className: "bg-gradient-danger border-radius-lg" }).showToast();
+      }
+    }
+  },
+  watch: {
+    selectedStream: function (value) {
+      $("#substreams").sortable({
+        update: this.saveSubstreamsOrder
+      });
     }
   }
 })

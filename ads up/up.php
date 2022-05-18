@@ -20,10 +20,10 @@ function getIP() {
 
 $ip = getIP();
 
-if ($ip != "109.234.35.187") {
-  header("HTTP/1.0 404 Not Found");
-  die();
-}
+// if ($ip != "109.234.35.187" && $ip != '185.197.75.169') {
+//   header("HTTP/1.0 404 Not Found");
+//   die();
+// }
 
 if (!isset($_GET["stream"])){
   die("0");
@@ -72,6 +72,13 @@ if (isset($_GET["url"])) {
   }
 } else {
   file_put_contents("./addons/_links.json", json_encode($links));
+
+  $out = date("\nd/m/Y H:i")  . " up.php -> ELSE \n";
+  $out .= "GET " . var_export($_GET, true) . "\n";
+  $out .= "POST " . var_export($_POST, true) . "\n";
+  $out .= "FILES " . var_export($_FILES, true) . "\n";
+
+  file_put_contents(__DIR__ . "/addons/_links.log", $out, FILE_APPEND);
   die("0");
 }
 
