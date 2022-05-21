@@ -359,12 +359,12 @@ var app = new Vue({
         Toastify({ text: "Произошла ошибка во время установки цвета", className: "bg-gradient-danger border-radius-lg" }).showToast();
       });
     },
-    clearSubstream(substream) {
-      if (confirm(`Вы действительно хотите очистить ${substream}?`)) {
+    clearSubstream(name, id) {
+      if (confirm(`Вы действительно хотите очистить ${name}?`)) {
         let self = this;
         axios({
           method: "get",
-          url: `/api/clearSubstream?substream=${substream}`,
+          url: `/api/clearSubstream?substreamid=${id}`,
         })
         .then(function (response) {
           if (response.data.success == true) {

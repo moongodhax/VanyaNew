@@ -48,7 +48,7 @@
                     <i class="fas fa-external-link-alt"></i></a>
                   <button class="btn btn-link text-secondary text-sm mb-0 p-0 ms-2" @click="copyStreamLink(stat.hash)">
                     <i class="fas fa-copy"></i></button>
-                  <button class="btn btn-link text-secondary text-sm mb-0 p-0 ms-2" @click="clearSubstream(stat.name)">
+                  <button class="btn btn-link text-secondary text-sm mb-0 p-0 ms-2" @click="clearSubstream(stat.name, stat.id)">
                     <i class="fas fa-eraser"></i></button>
                 </template>
               </div>

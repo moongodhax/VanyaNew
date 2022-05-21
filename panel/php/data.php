@@ -55,6 +55,7 @@ function getAllStats() {
     $stream_id = $stream["id"];
     $out[] = [
       "type" => "stream",
+      "id" => $stream["id"],
       "name" => $stream['stream'],
       "color" => $stream['color'],
       "position" => $stream['position'],
@@ -70,6 +71,7 @@ function getAllStats() {
       $substream_id = $substream["id"];
       $out[] = [
         "type" => "substream",
+        "id" => $substream["id"],
         "parentname" => $stream['stream'],
         "parentcolor" => $stream['color'],
         "name" => $substream["name"],

@@ -26,7 +26,7 @@ switch ($path) {
   break;
 
   case "/api/clearSubstream":
-    clearSubstream($_GET["substream"]);
+    clearSubstream($_GET["substreamid"]);
     echo json_encode(["success" => true]);
   break;
 

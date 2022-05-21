@@ -154,11 +154,11 @@ function updateSubstreamsOrder($substreams) {
   }
 }
 
-function clearSubstream($substream) {
+function clearSubstream($substreamid) {
   global $mysqli;
-  $substream = mysqli_real_escape_string($mysqli, $substream);
+  $substreamid = mysqli_real_escape_string($mysqli, $substreamid);
 
-  mysqli_query($mysqli, "DELETE FROM `records` WHERE `substream` = '$substream'");
+  mysqli_query($mysqli, "DELETE FROM `records` WHERE `substreamid` = '$substreamid'");
 }
 
 ?>
