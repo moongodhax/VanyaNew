@@ -3,7 +3,7 @@ require_once(__DIR__ . "/../php/mysqli.php");
 
 $url_array = parse_url($_SERVER['REQUEST_URI']);
 $path = $url_array["path"];
-$hash = str_replace("/view/", "", $path);
+$hash = str_replace("/hzsdvxzdfjhrt/view/", "", $path);
 
 $streamid = null;
 $substreamid = null;
@@ -348,7 +348,7 @@ function getMap($streamid, $substreamid, $ts1, $ts2) {
         week: [],
       },
       mounted: function () {
-        this.hash = new URL(location.href).pathname.replace("/view/", "");
+        this.hash = new URL(location.href).pathname.replace("/hzsdvxzdfjhrt/view/", "");
         let self = this;
         $("#installs-table").DataTable({
           serverSide: true,
@@ -356,7 +356,7 @@ function getMap($streamid, $substreamid, $ts1, $ts2) {
           ajax: function (data, callback, settings) {
             data.date_start = self.date_start;
             data.date_end = self.date_end;
-            $.post(`/view/datatables.php?hash=${self.hash}`, data)
+            $.post(`./datatables.php?hash=${self.hash}`, data)
             .done(function (data) {
               callback(JSON.parse(data));
             })
@@ -369,7 +369,7 @@ function getMap($streamid, $substreamid, $ts1, $ts2) {
               title: "IP",
               data: "ip",
               render: function ( data, type, row, meta ) {
-                return `<div class="flag-wrapper"><img src="/view/flags/${row.country.toLowerCase()}.svg" class="flag" title="${row.country}"></div> ${data}`;
+                return `<div class="flag-wrapper"><img src="./flags/${row.country.toLowerCase()}.svg" class="flag" title="${row.country}"></div> ${data}`;
               }
             },
             {
@@ -409,7 +409,7 @@ function getMap($streamid, $substreamid, $ts1, $ts2) {
           $("#map").html("");
 
           $.post(
-            `/view/${this.hash}`,
+            `./${this.hash}`,
             { 
               get_stats: true,
               date_start: this.date_start,

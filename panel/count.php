@@ -1,52 +1,50 @@
 <?php
-require_once("./geoip/geoip.php");
-require_once("./php/mysqli.php");
+require_once("../geoip/geoip.php");
+require_once("../php/mysqli.php");
 
 $ip = getIP();
 
-// проверка потока и подпотока
-if (!isset($_GET["stream"])) {
-  writeRecord($mysqli, '', 0, '', 0, "decline", 'No stream', $_SERVER['HTTP_USER_AGENT'], '', $ip, '', getCountryCode($ip), time());
-  die("0");
-}
-
-$stream = "";
-$streamid = "";
-$substreamid = "";
-if ($_GET["stream"] == "mix" && $_GET["substream"] == "mixtwo") {
-  $_GET["stream"] = "mixone";
-} else if ($_GET["stream"] == "r" || $_GET["stream"] == "n") {
+if ($_GET["stream"] == "r" || $_GET["stream"] == "n") {
   writeRecord($mysqli, 0, 0, "decline", 'R or N', $_SERVER['HTTP_USER_AGENT'], '', $ip, '', getCountryCode($ip), time());
   die("0");
-} else {
+} 
+
+$streamid = null;
+$substreamid = null;
+
+if ($_GET["stream"] == 'start' && $_GET["substream"] == 'mixinte') {
   $streams = getStreams($mysqli);
   foreach ($streams as $s) {
-    if ($s["stream"] == $_GET["stream"]) {
-      $stream = $s["stream"];
-      $streamid = $s["id"];
+    if ($s['name'] == 'start') {
+      $streamid = $s['id'];
+      break;
+    }
+  }
 
-      if (isset($_GET["substream"])) {
-        $search = false;
-        foreach ($s["substreams"] as $ss) {
-          if ($ss['name'] == $_GET["substream"]) {
-            $substreamid = $ss['id'];
-            $search = true;
-            break;
-          }
-        }
-        if (!$search) {
-          writeRecord($mysqli, $streamid, 0, "decline", 'Incorrect substream', $_SERVER['HTTP_USER_AGENT'], '', $ip, '', getCountryCode($ip), time());
-          die("0");
-        }
-      }
-
+  $substreams = getSubStreams($mysqli);
+  foreach ($substreams as $ss) {
+    if ($ss['streamid'] == $streamid && $ss['name'] == 'mixinte') {
+      $substreamid = $ss['id'];
       break;
     }
   }
 }
+else if (isset($_GET["substream"])) {
+  $substreams = getSubStreams($mysqli);
+  foreach ($substreams as $ss) {
+    if ($ss['name'] == $_GET["substream"]) {
+      $streamid = $ss['streamid'];
+      $substreamid = $ss['id'];
+      break;
+    }
+  }
 
-if ($stream == "") {
-  writeRecord($mysqli, '', 0, '', 0, "decline", 'Empty stream', $_SERVER['HTTP_USER_AGENT'], '', $ip, '', getCountryCode($ip), time());
+  if ($substreamid === null) {
+    writeRecord($mysqli, $streamid, 0, "decline", 'Incorrect substream', $_SERVER['HTTP_USER_AGENT'], '', $ip, '', getCountryCode($ip), time());
+    die("0");
+  }
+} else {
+  writeRecord($mysqli, '', 0, '', 0, "decline", 'No stream', $_SERVER['HTTP_USER_AGENT'], '', $ip, '', getCountryCode($ip), time());
   die("0");
 }
 
@@ -73,13 +71,13 @@ if ($_SERVER['HTTP_USER_AGENT'] != "1") {
 }
 
 // проверка айпи на повторы
-if (!checkIP($mysqli, $ip)) {
+if (!checkIP($mysqli, $streamid, $ip)) {
   writeRecord($mysqli, $streamid, $substreamid, "decline", 'Duplicate', $_SERVER['HTTP_USER_AGENT'], '', $ip, '', getCountryCode($ip), time());
   die("0");
 }
 
 $sub = $_GET["sub"];
-
+$stream = getStreamName($mysqli, $streamid);
 writeRecord($mysqli, $streamid, $substreamid, "ok", "", $_SERVER['HTTP_USER_AGENT'], $sub, $ip, getDistributor(strtoupper($stream)), getCountryCode($ip), time());
 
 echo "1";
@@ -88,6 +86,12 @@ echo "1";
  * функции
  */
 
+function getStreamName($mysqli, $streamid) {
+  $result = mysqli_query($mysqli, "SELECT `name` FROM `streams` WHERE `id` = $streamid");
+  $row = mysqli_fetch_assoc($result);
+  return $row['name'];
+}
+
 function getBannedCountries($mysqli) {
   $result = mysqli_query($mysqli, "SELECT `value` AS val FROM `settings` WHERE `name` = 'banned_countries'");
   $row = mysqli_fetch_assoc($result);
@@ -95,33 +99,38 @@ function getBannedCountries($mysqli) {
 }
 
 function getStreams($mysqli) {
-  $streams = [];
+  $out = [];
+
   $result = mysqli_query($mysqli, "SELECT * FROM `streams`");
   while($row = mysqli_fetch_assoc($result)) {
-    $streams[$row['id']] = [
-      "id" => $row['id'],
-      "stream" => $row['name'],
-      "substreams" => []
-    ];
-  }
-
-  $result = mysqli_query($mysqli, "SELECT * FROM `substreams`");
-  while($row = mysqli_fetch_assoc($result)) {
-    $streams[$row['streamid']]["substreams"][] = [
+    $out[] = [
       "id" => $row['id'],
       "name" => $row['name']
     ];
   }
 
-  $streams = array_values($streams);
+  return $out;
+}
 
-  return $streams;
+function getSubStreams($mysqli) {
+  $out = [];
+
+  $result = mysqli_query($mysqli, "SELECT * FROM `substreams`");
+  while($row = mysqli_fetch_assoc($result)) {
+    $out[] = [
+      "id" => $row['id'],
+      "streamid" => $row['streamid'],
+      "name" => $row['name']
+    ];
+  }
+
+  return $out;
 }
 
 function getDistributor($stream) {
   $ch = curl_init();
 
-  curl_setopt($ch, CURLOPT_URL, "http://203.159.80.49/getsizes.php");
+  curl_setopt($ch, CURLOPT_URL, "http://171.22.30.106/getsizes.php");
   curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
   curl_setopt($ch, CURLOPT_HTTPHEADER, ['User-Agent: 1']);
 
@@ -171,8 +180,8 @@ function getIP() {
   return $ip; 
 }
 
-function checkIP($mysqli, $ip) {
-  $result = mysqli_query($mysqli, "SELECT COUNT(*) AS cnt FROM `records` WHERE `ip` = '$ip' AND `type` != 'blacklist'");
+function checkIP($mysqli, $streamid, $ip) {
+  $result = mysqli_query($mysqli, "SELECT COUNT(*) AS cnt FROM `records` WHERE `streamid` = $streamid AND `ip` = '$ip' AND `type` != 'blacklist'");
   $row = mysqli_fetch_assoc($result);
   if ($row['cnt'] > 0) {
     return false;

@@ -6,7 +6,7 @@ $ip = getIP();
 //   die();
 // }
 
-require_once("./php/mysqli.php");
+require_once("../php/mysqli.php");
 
 $stream_arr = getStreams();
 $stream_arr[] = "distributor";
@@ -16,6 +16,11 @@ if (!isset($_GET['stream']) || !in_array($_GET['stream'], $stream_arr)) {
   die();
 }
 $stream = $_GET['stream'];
+
+if (isset($_GET['timing'])) {
+  $timing = $_GET['timing'];
+  die(countTiming($stream, $timing));
+}
 
 $action_arr = ["show", "delete"];
 if (!isset($_GET['action']) || !in_array($_GET['action'], $action_arr)) {
@@ -43,11 +48,14 @@ if ($action == "show") {
       ]
     ]);
   }
+  else if ($stream == "xxx") {
+    echo json_encode(countXXX());
+  }
   else echo countStream($stream);
 } else if ($action == "delete") {
   if ($stream == "distributor") clearDistributor();
   else clearCurrent($stream);
-  if (mysqli_error($mysqli) == "") echo "1";
+  if (mysqli_error($mysqli) == "") echo "done";
   else echo "0";
 }
 
@@ -75,6 +83,70 @@ function countStream($stream) {
   $result = mysqli_query($mysqli, "SELECT COUNT(*) AS cnt FROM `records` WHERE `timestamp` > $current_ts AND `streamid` = '$id' AND `type` = 'ok'");
   $row = mysqli_fetch_assoc($result);
   return $row['cnt'];
+}
+
+function countTiming($stream, $timing) {
+  global $mysqli;
+
+  $timings = [
+    '5m' => 300,
+    '15m' => 900,
+    '30m' => 1800,
+    '1h' => 3600,
+    '3h' => 10800,
+    '6h' => 21600,
+    '12h' => 43200,
+    '24h' => 86400,
+  ];
+
+  if (!isset($timings[$timing])) return -1;
+
+  $result = mysqli_query($mysqli, "SELECT `id` FROM `streams` WHERE `name` = '$stream'");
+  $row = mysqli_fetch_assoc($result);
+  $id = $row['id'];
+
+  $ts = time() - $timings[$timing];
+
+  $result = mysqli_query($mysqli, "SELECT COUNT(*) AS cnt FROM `records` WHERE `timestamp` > $ts AND `streamid` = '$id' AND `type` = 'ok'");
+  $row = mysqli_fetch_assoc($result);
+  return $row['cnt'];
+}
+
+function countXXX() {
+  global $mysqli;
+
+  $streamid = 0;
+  $current_ts = 0;
+  
+  $result = mysqli_query($mysqli, "SELECT * FROM `streams`");
+  while($row = mysqli_fetch_assoc($result)) {
+    if ($row['name'] == "xxx") { 
+      $streamid = $row['id'];
+      $current_ts = $row['current_ts'];
+      break;
+    }
+  }
+
+  $us = 0;
+  $world = 0;
+  
+  $result = mysqli_query($mysqli, "SELECT * FROM `substreams`");
+  while($row = mysqli_fetch_assoc($result)) {
+    if ($row['streamid'] == $streamid && $row['name'] == "us") $us = $row['id'];
+    if ($row['streamid'] == $streamid && $row['name'] == "world") $world = $row['id'];
+  }
+
+  $q = "SELECT
+    COUNT(CASE WHEN `timestamp` >= {$current_ts} AND `substreamid` = $us THEN 1 END) AS us,
+    COUNT(CASE WHEN `timestamp` >= {$current_ts} AND `substreamid` = $world THEN 1 END) AS world
+  FROM `records`;";
+  
+  $result = mysqli_query($mysqli, $q);
+  $row = mysqli_fetch_assoc($result);
+
+  $out['us'] = $row['us'];
+  $out['world'] = $row['world'];
+  return $out;
 }
 
 function countDistributor() {

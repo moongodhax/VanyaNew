@@ -43,8 +43,8 @@ if (isset($_GET["url"])) {
   $links[$_GET["stream"]] = $url;
   file_put_contents("./addons/_links.json", json_encode($links));
 
-  $contents = file_get_contents($url);
-  if (strlen($contents) < 1024) {
+  $contents = download($url);
+  if ($contents === false) {
     $out = date("\nd/m/Y H:i") . " up.php -> " . $_GET['stream'] . " -> $url -> downloaded < 1024";
     file_put_contents(__DIR__ . "/addons/_links.log", $out, FILE_APPEND);
     die("0");    
@@ -80,6 +80,21 @@ if (isset($_GET["url"])) {
 
   file_put_contents(__DIR__ . "/addons/_links.log", $out, FILE_APPEND);
   die("0");
+}
+
+function download($url) {
+  $ch = curl_init();
+  curl_setopt($ch, CURLOPT_URL, $url);
+  curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+  curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
+  
+  $result = curl_exec($ch);
+  $info = curl_getinfo($ch);
+
+  curl_close($ch);
+
+  if ($info['size_download'] < 1024) return false;
+  else return($result);
 }
 
 ?>
