@@ -1,6 +1,6 @@
 <?php
-require_once("../geoip/geoip.php");
-require_once("../php/mysqli.php");
+require_once("./geoip/geoip.php");
+require_once("./php/mysqli.php");
 
 $ip = getIP();
 
@@ -198,10 +198,14 @@ function checkBlacklist($mysqli, $ip) {
   return ($row['cnt'] != 0);
 }
 
-function writeRecord($mysqli, $streamid, $substreamid, $type, $reason, $ua, $sub,  $ip,$distributor, $country, $timestamp) {
-  $q = "INSERT INTO `records` (`streamid`, `substreamid`, `type`, `reason`, `ua`, `sub`, `ip`, `distributor`, `country`, `timestamp`) VALUES 
-  ($streamid, $substreamid, '$type', '$reason', '$ua', '$sub', '$ip', '$distributor', '$country', $timestamp)";
-  mysqli_query($mysqli, $q);
+function writeRecord($mysqli, $streamid, $substreamid, $type, $reason, $ua, $sub,  $ip, $distributor, $country, $timestamp) {
+  $result = mysqli_query($mysqli, "SELECT COUNT(*) AS cnt FROM `records` WHERE `streamid` = $streamid AND `ip` = '$ip' AND `type` == '$type'");
+  $row = mysqli_fetch_assoc($result);
+  if ($row['cnt'] == 0) {
+    $q = "INSERT INTO `records` (`streamid`, `substreamid`, `type`, `reason`, `ua`, `sub`, `ip`, `distributor`, `country`, `timestamp`) VALUES 
+    ($streamid, $substreamid, '$type', '$reason', '$ua', '$sub', '$ip', '$distributor', '$country', $timestamp)";
+    mysqli_query($mysqli, $q);
+  }
 }
 
 ?>

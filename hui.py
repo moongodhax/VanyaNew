@@ -52,13 +52,15 @@ with open('result.csv', 'w', encoding='UTF8', newline='') as f:
     writer = csv.writer(f, quotechar='"')
     writer.writerows(result)
 
-# USE IPNEW;
+"""
+USE ipnew;
 
-# LOAD DATA INFILE '/var/lib/mysql-files/result.csv'
-# INTO TABLE `records`
-# FIELDS TERMINATED BY ','
-# ENCLOSED BY '"' LINES
-# TERMINATED BY '\n'
-# (`id`,`streamid`,`substreamid`,`type`,`reason`,`ua`,`sub`,`ip`,`distributor`,`country`,`timestamp`);
+LOAD DATA INFILE '/var/lib/mysql-files/result.csv'
+INTO TABLE `records`
+FIELDS TERMINATED BY ','
+ENCLOSED BY '"' LINES
+TERMINATED BY '\n'
+(`id`,`streamid`,`substreamid`,`type`,`reason`,`ua`,`sub`,`ip`,`distributor`,`country`,`timestamp`);
 
-# CREATE TABLE `records_dump` AS SELECT * FROM `records`;
+CREATE TABLE `records_dump` AS SELECT * FROM `records`;
+"""
