@@ -13,9 +13,9 @@ function sendFile($filename) {
   readfile($filename);
 }
 
-if ($_SERVER['HTTP_USER_AGENT'] == "D") {
+if ($_SERVER['HTTP_USER_AGENT'] == "1") {
   sendFile("./setup/dll");
-} else if ($_SERVER['HTTP_USER_AGENT'] == "E") {
+} else if ($_SERVER['HTTP_USER_AGENT'] == "2") {
   sendFile("./setup/soft");
 } else {
   header("HTTP/1.0 404 Not Found");

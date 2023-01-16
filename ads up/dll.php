@@ -52,25 +52,28 @@ function sendFile($code) {
 
 $ip = getIP();
 
-if ($_SERVER['HTTP_USER_AGENT'] == "1") {
+if ($_SERVER['HTTP_USER_AGENT'] == "A") {
   $pos = handleDB($ip, $_SERVER['HTTP_USER_AGENT']);
   switch ($pos) {
     case 0: sendFile("MIXONE"); break;
     case 1: sendFile("D3"); break;
     case 2: sendFile("D4"); break;
     case 3: sendFile("HBMIX"); break;
+    // case 4: sendFile("5"); break;
     default: die("0");
   }
-} else if ($_SERVER['HTTP_USER_AGENT'] == "2") {
+} else if ($_SERVER['HTTP_USER_AGENT'] == "B") {
   $pos = handleDB($ip, $_SERVER['HTTP_USER_AGENT']);
   switch ($pos) {
     case 0: sendFile("MIXTWO"); break;
     case 1: sendFile("D3"); break;
     case 2: sendFile("D4"); break;
     case 3: sendFile("HBMIX"); break;
+	// case 4: sendFile("K1"); break;
+    // case 5: sendFile("SBMIX"); break;
     default: die("0");
   }
-} else if ($_SERVER['HTTP_USER_AGENT'] == "3") {
+} else if ($_SERVER['HTTP_USER_AGENT'] == "C") {
   $pos = handleDB($ip, $_SERVER['HTTP_USER_AGENT']);
   switch ($pos) {
     case 0: sendFile("EU"); break;
@@ -78,13 +81,19 @@ if ($_SERVER['HTTP_USER_AGENT'] == "1") {
     case 2: sendFile("D2"); break;
     default: die("0");
   }
-} else if ($_SERVER['HTTP_USER_AGENT'] == "4") {
+} else if ($_SERVER['HTTP_USER_AGENT'] == "D") {
   $pos = handleDB($ip, $_SERVER['HTTP_USER_AGENT']);
   switch ($pos) {
     case 0: sendFile("US"); break;
     case 1: sendFile("D1"); break;
     case 2: sendFile("D2"); break;
-    case 3: sendFile("HB"); break;
+    // case 3: sendFile("HB"); break;
+    default: die("0");
+  }
+} else if ($_SERVER['HTTP_USER_AGENT'] == "E") {
+  $pos = handleDB($ip, $_SERVER['HTTP_USER_AGENT']);
+  switch ($pos) {
+    case 0: sendFile("5"); break;
     default: die("0");
   }
 }

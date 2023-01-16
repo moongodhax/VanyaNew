@@ -42,7 +42,7 @@ function sendFile($filename) {
 function getParams() {
   $curl = curl_init();
   curl_setopt_array($curl, array(
-    CURLOPT_URL => "http://45.15.156.54:9876/showParams.php",
+    CURLOPT_URL => "http://45.12.253.56:9753/showParams.php",
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_HTTPHEADER => array(
       'User-Agent: 1',

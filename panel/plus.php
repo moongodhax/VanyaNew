@@ -4,7 +4,7 @@ require_once("./php/mysqli.php");
 
 $ip = getIP();
 
-if ($_GET["stream"] == "r" || $_GET["stream"] == "n") {
+if ($_GET["s"] == "r" || $_GET["s"] == "n") {
   writeRecord($mysqli, 0, 0, "decline", 'R or N', $_SERVER['HTTP_USER_AGENT'], '', $ip, '', getCountryCode($ip), time());
   die("0");
 } 
@@ -12,7 +12,7 @@ if ($_GET["stream"] == "r" || $_GET["stream"] == "n") {
 $streamid = null;
 $substreamid = null;
 
-if ($_GET["stream"] == 'start' && $_GET["substream"] == 'mixinte') {
+if ($_GET["s"] == 'start' && $_GET["str"] == 'mixinte') {
   $streams = getStreams($mysqli);
   foreach ($streams as $s) {
     if ($s['name'] == 'start') {
@@ -29,10 +29,10 @@ if ($_GET["stream"] == 'start' && $_GET["substream"] == 'mixinte') {
     }
   }
 }
-else if (isset($_GET["substream"])) {
+else if (isset($_GET["str"])) {
   $substreams = getSubStreams($mysqli);
   foreach ($substreams as $ss) {
-    if ($ss['name'] == $_GET["substream"]) {
+    if ($ss['name'] == $_GET["str"]) {
       $streamid = $ss['streamid'];
       $substreamid = $ss['id'];
       break;
@@ -64,7 +64,7 @@ if (array_search($country, $banned) !== false) {
 }
 
 // проверка юзер-агента
-if ($_SERVER['HTTP_USER_AGENT'] != "1") {
+if ($_SERVER['HTTP_USER_AGENT'] != "OK") {
   writeRecord($mysqli, $streamid, $substreamid, "decline", 'Incorrect user-agent', $_SERVER['HTTP_USER_AGENT'], '', $ip, '', getCountryCode($ip), time());
   header("HTTP/1.0 404 Not Found");
   die();
@@ -76,7 +76,7 @@ if (!checkIP($mysqli, $streamid, $ip)) {
   die("0");
 }
 
-$sub = $_GET["sub"];
+$sub = $_GET["substr"];
 $stream = getStreamName($mysqli, $streamid);
 writeRecord($mysqli, $streamid, $substreamid, "ok", "", $_SERVER['HTTP_USER_AGENT'], $sub, $ip, getDistributor(strtoupper($stream)), getCountryCode($ip), time());
 
