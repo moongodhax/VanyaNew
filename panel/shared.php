@@ -9,8 +9,8 @@ $ip = getIP();
 $stream = $_GET["stream"];
 $action = $_GET["action"];
 
-$first = "62.197.136.41";
-$second = "45.15.156.54";
+$first = "45.12.253.51";
+$second = "45.12.253.56/lzkjfvzshbd";
 
 $show_db = json_decode(file_get_contents("show_db.json"), true);
 
@@ -22,13 +22,13 @@ if ($action == "show"){
         else  $show_db["1mix"] = $count;
         $total += intval($count);
 
-        $count = file_get_contents("http://$second/lzkjfvzshbd/show.php?stream=mixone&action=show");
+        $count = file_get_contents("http://$second/show.php?stream=mixone&action=show");
         if ($count === false) $count = $show_db["2mixone"];
         else  $show_db["2mixone"] = $count;
         $total += intval($count);
     }
     if ($stream == "mixtwo"){
-        $count = file_get_contents("http://$second/lzkjfvzshbd/show.php?stream=mixtwo&action=show");
+        $count = file_get_contents("http://$second/show.php?stream=mixtwo&action=show");
         if ($count === false) $count = $show_db["2mixtwo"];
         else  $show_db["2mixtwo"] = $count;
         $total += intval($count);
@@ -39,7 +39,7 @@ if ($action == "show"){
         else  $show_db["1eu"] = $count;
         $total += intval($count);
 
-        $count = file_get_contents("http://$second/lzkjfvzshbd/show.php?stream=eu&action=show");
+        $count = file_get_contents("http://$second/show.php?stream=eu&action=show");
         if ($count === false) $count = $show_db["2eu"];
         else  $show_db["2eu"] = $count;
         $total += intval($count);
@@ -50,7 +50,7 @@ if ($action == "show"){
         else  $show_db["1us"] = $count;
         $total += intval($count);
 
-        $count = file_get_contents("http://$second/lzkjfvzshbd/show.php?stream=us&action=show");
+        $count = file_get_contents("http://$second/show.php?stream=us&action=show");
         if ($count === false) $count = $show_db["2us"];
         else  $show_db["2us"] = $count;
         $total += intval($count);
@@ -66,23 +66,23 @@ if ($action == "delete"){
 		$show_db["1mix"] = 0;
 		$show_db["2mixone"] = 0;
         file_get_contents("http://$first/show.php?stream=mix&action=delete");
-        file_get_contents("http://$second/lzkjfvzshbd/show.php?stream=mixone&action=delete");
+        file_get_contents("http://$second/show.php?stream=mixone&action=delete");
     }
     if ($stream == "mixtwo"){
 		$show_db["2mixtwo"] = 0;
-        file_get_contents("http://$second/lzkjfvzshbd/show.php?stream=mixtwo&action=delete");
+        file_get_contents("http://$second/show.php?stream=mixtwo&action=delete");
     }
     if ($stream == "eu"){
 		$show_db["1eu"] = 0;
 		$show_db["2eu"] = 0;
         file_get_contents("http://$first/show.php?stream=eu&action=delete");
-        file_get_contents("http://$second/lzkjfvzshbd/show.php?stream=eu&action=delete");
+        file_get_contents("http://$second/show.php?stream=eu&action=delete");
     }
     if ($stream == "us"){
 		$show_db["1us"] = 0;
 		$show_db["2us"] = 0;
         file_get_contents("http://$first/show.php?stream=us&action=delete");
-        file_get_contents("http://$second/lzkjfvzshbd/show.php?stream=us&action=delete");
+        file_get_contents("http://$second/show.php?stream=us&action=delete");
     }
 	
     file_put_contents("show_db.json", json_encode($show_db));

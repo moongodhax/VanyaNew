@@ -22,7 +22,7 @@ function handleDB($ip, $ua) {
   $mysqli = mysqli_connect("localhost", "admin", "Pf7srQGPjt", "ads");
 
   // проверка есть ли запись с такими данными
-  $result = mysqli_query($mysqli, "SELECT * FROM `records` WHERE `ip` = '$ip' AND `ua` = $ua LIMIT 1");
+  $result = mysqli_query($mysqli, "SELECT * FROM `records` WHERE `ip` = '$ip' AND `ua` = '$ua' LIMIT 1");
   $row = mysqli_fetch_assoc($result);
   if ($row != NULL) { // если есть то получаю, инкрементирую и возвращаю текущую очередь
     $id = $row["id"];
@@ -30,7 +30,7 @@ function handleDB($ip, $ua) {
     mysqli_query($mysqli, "UPDATE `records` SET `queue` = $new_q WHERE `id` = $id");
     return $row["queue"];
   } else { // если нет, то создаю, ставлю очередь 1 и возвращаю 0
-    mysqli_query($mysqli, "INSERT INTO `records` (`ip`, `ua`, `queue`) VALUES ('$ip', $ua, 1)");
+    mysqli_query($mysqli, "INSERT INTO `records` (`ip`, `ua`, `queue`) VALUES ('$ip', '$ua', 1)");
     return 0;
   }
 }

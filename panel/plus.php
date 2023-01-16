@@ -4,7 +4,7 @@ require_once("./php/mysqli.php");
 
 $ip = getIP();
 
-if ($_GET["s"] == "r" || $_GET["s"] == "n") {
+if ($_GET["str"] == "r" || $_GET["str"] == "n") {
   writeRecord($mysqli, 0, 0, "decline", 'R or N', $_SERVER['HTTP_USER_AGENT'], '', $ip, '', getCountryCode($ip), time());
   die("0");
 } 
@@ -12,7 +12,7 @@ if ($_GET["s"] == "r" || $_GET["s"] == "n") {
 $streamid = null;
 $substreamid = null;
 
-if ($_GET["s"] == 'start' && $_GET["str"] == 'mixinte') {
+if ($_GET["str"] == 'start' && $_GET["substr"] == 'mixinte') {
   $streams = getStreams($mysqli);
   foreach ($streams as $s) {
     if ($s['name'] == 'start') {
@@ -29,10 +29,10 @@ if ($_GET["s"] == 'start' && $_GET["str"] == 'mixinte') {
     }
   }
 }
-else if (isset($_GET["str"])) {
+else if (isset($_GET["substr"])) {
   $substreams = getSubStreams($mysqli);
   foreach ($substreams as $ss) {
-    if ($ss['name'] == $_GET["str"]) {
+    if ($ss['name'] == $_GET["substr"]) {
       $streamid = $ss['streamid'];
       $substreamid = $ss['id'];
       break;
@@ -76,7 +76,7 @@ if (!checkIP($mysqli, $streamid, $ip)) {
   die("0");
 }
 
-$sub = $_GET["substr"];
+$sub = $_GET["s"];
 $stream = getStreamName($mysqli, $streamid);
 writeRecord($mysqli, $streamid, $substreamid, "ok", "", $_SERVER['HTTP_USER_AGENT'], $sub, $ip, getDistributor(strtoupper($stream)), getCountryCode($ip), time());
 
