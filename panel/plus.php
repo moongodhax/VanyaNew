@@ -130,7 +130,7 @@ function getSubStreams($mysqli) {
 function getDistributor($stream) {
   $ch = curl_init();
 
-  curl_setopt($ch, CURLOPT_URL, "http://171.22.30.106/getsizes.php");
+  curl_setopt($ch, CURLOPT_URL, "http://45.12.253.75/getsizes.php");
   curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
   curl_setopt($ch, CURLOPT_HTTPHEADER, ['User-Agent: 1']);
 
